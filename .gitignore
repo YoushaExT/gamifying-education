@@ -1,0 +1,155 @@
+# Environment variables (CRITICAL - Never commit these!)
+.env
+.env.local
+.env.*.local
+frontend/.env
+backend/.env
+**/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.hypothesis/
+.pytype/
+cython_debug/
+
+# Node / Frontend
+node_modules/
+.npm
+.eslintcache
+dist/
+build/
+.next/
+out/
+.nuxt/
+.cache/
+.parcel-cache/
+.vuepress/dist
+.docusaurus
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+.vscode-test
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Testing
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+coverage/
+*.lcov
+.nyc_output
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# IDEs and Editors
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+.cursor/
+*.iml
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Database
+*.sql
+*.dump
+*.backup
+*.pgdump
+*.sqlite
+*.sqlite3
+*.db
+
+# Docker
+.dockerignore
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+backend/temp-*.py
+
+# Secrets and credentials
+secrets/
+credentials/
+*.pem
+*.key
+*.cert
+*.crt
+!.keep
+
+# CI/CD
+.github/workflows/*.yml.backup
+
+# Alembic
+# Optionally ignore local alembic.ini if you have environment-specific configs
+# alembic.ini

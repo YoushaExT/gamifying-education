@@ -1,0 +1,11 @@
+[30 december]
+- Generate styling improvements
+    - added hobbit background
+    - card light brown gradient
+    - remove top bar
+    - skip button moved to top right
+    - add scale prop and resize stuff: health bar
+    - Added shield 3d
+- Fixed disconnection/reconnection
+    - backend was not sending websocket message when guest reconnected
+- Option to leave (forfiet game)

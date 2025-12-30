@@ -1,0 +1,131 @@
+# Default Card Game Deck Template
+# This file defines the cards and deck composition for the card combat game.
+# Cards are loaded into the database on first run if the CardTemplate table is empty.
+# Use the reload_from_yaml() function to refresh cards during development.
+
+cards:
+  # ==================== Damage Cards ====================
+  - key: "fireball"
+    name: "Fireball"
+    description: "Hurl a blazing fireball at your opponent"
+    type: "basic_damage"
+    effect:
+      min_value: 2
+      max_value: 5
+
+  - key: "ice_shard"
+    name: "Ice Shard"
+    description: "Launch a piercing shard of ice"
+    type: "basic_damage"
+    effect:
+      min_value: 3
+      max_value: 4
+
+  - key: "lightning_bolt"
+    name: "Lightning Bolt"
+    description: "Strike with the power of lightning"
+    type: "basic_damage"
+    effect:
+      min_value: 2
+      max_value: 6
+
+  - key: "shadow_strike"
+    name: "Shadow Strike"
+    description: "Attack from the shadows"
+    type: "basic_damage"
+    effect:
+      min_value: 3
+      max_value: 5
+
+  - key: "arcane_blast"
+    name: "Arcane Blast"
+    description: "Release a burst of pure arcane energy"
+    type: "basic_damage"
+    effect:
+      min_value: 2
+      max_value: 4
+
+  # ==================== Shield Cards ====================
+  - key: "shield_wall"
+    name: "Shield Wall"
+    description: "Raise a protective barrier"
+    type: "basic_shield"
+    effect:
+      min_value: 2
+      max_value: 4
+
+  - key: "arcane_barrier"
+    name: "Arcane Barrier"
+    description: "Conjure a magical shield"
+    type: "basic_shield"
+    effect:
+      min_value: 2
+      max_value: 5
+
+  - key: "frost_armor"
+    name: "Frost Armor"
+    description: "Encase yourself in protective ice"
+    type: "basic_shield"
+    effect:
+      min_value: 3
+      max_value: 4
+
+  # ==================== Heal Cards ====================
+  - key: "healing_potion"
+    name: "Healing Potion"
+    description: "Drink a restorative potion"
+    type: "basic_heal"
+    effect:
+      min_value: 2
+      max_value: 4
+
+  - key: "regeneration"
+    name: "Regeneration"
+    description: "Channel healing energy"
+    type: "basic_heal"
+    effect:
+      min_value: 2
+      max_value: 5
+
+  - key: "natures_blessing"
+    name: "Nature's Blessing"
+    description: "Call upon nature to restore health"
+    type: "basic_heal"
+    effect:
+      min_value: 3
+      max_value: 4
+
+# ==================== Deck Composition ====================
+# Total cards should be around 25-30 for a balanced game
+deck:
+  name: "default"
+  is_default: true
+  composition:
+    # Damage cards (12 total - most common)
+    - card_key: "fireball"
+      count: 3
+    - card_key: "ice_shard"
+      count: 3
+    - card_key: "lightning_bolt"
+      count: 2
+    - card_key: "shadow_strike"
+      count: 2
+    - card_key: "arcane_blast"
+      count: 2
+
+    # Shield cards (7 total)
+    - card_key: "shield_wall"
+      count: 3
+    - card_key: "arcane_barrier"
+      count: 2
+    - card_key: "frost_armor"
+      count: 2
+
+    # Heal cards (6 total - least common)
+    - card_key: "healing_potion"
+      count: 2
+    - card_key: "regeneration"
+      count: 2
+    - card_key: "natures_blessing"
+      count: 2
+

@@ -1,0 +1,78 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  # GitHub-hosted runner
+    env:
+      ENVIRONMENT: staging
+      DOMAIN: ${{ secrets.DOMAIN_STAGING }}
+      STACK_NAME: ${{ secrets.STACK_NAME_STAGING }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      FIRST_SUPERUSER: ${{ secrets.FIRST_SUPERUSER }}
+      FIRST_SUPERUSER_PASSWORD: ${{ secrets.FIRST_SUPERUSER_PASSWORD }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      EMAILS_FROM_EMAIL: ${{ secrets.EMAILS_FROM_EMAIL }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # For AI question generation
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and export images
+        run: |
+          docker compose -f docker-compose.yml build
+          docker save -o /tmp/images.tar $(docker compose -f docker-compose.yml config --images)
+
+      - name: Copy images to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          source: "/tmp/images.tar,docker-compose.yml"
+          target: "/home/${{ secrets.STAGING_USER }}/gamifying-education-staging/"
+
+      - name: Deploy on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd /home/${{ secrets.STAGING_USER }}/gamifying-education-staging/
+            docker load -i /tmp/images.tar
+            rm /tmp/images.tar
+
+            # Create .env file from secrets
+            cat > .env << EOF
+            ENVIRONMENT=${{ env.ENVIRONMENT }}
+            DOMAIN=${{ env.DOMAIN }}
+            STACK_NAME=${{ env.STACK_NAME }}
+            SECRET_KEY=${{ env.SECRET_KEY }}
+            FIRST_SUPERUSER=${{ env.FIRST_SUPERUSER }}
+            FIRST_SUPERUSER_PASSWORD=${{ env.FIRST_SUPERUSER_PASSWORD }}
+            SMTP_HOST=${{ env.SMTP_HOST }}
+            SMTP_USER=${{ env.SMTP_USER }}
+            SMTP_PASSWORD=${{ env.SMTP_PASSWORD }}
+            EMAILS_FROM_EMAIL=${{ env.EMAILS_FROM_EMAIL }}
+            POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
+            SENTRY_DSN=${{ env.SENTRY_DSN }}
+            OPENAI_API_KEY=${{ env.OPENAI_API_KEY }}
+            EOF
+
+            # Deploy with Docker Compose
+            docker compose -f docker-compose.yml --project-name ${{ env.STACK_NAME }} up -d
+
+            # Run migrations
+            docker compose --project-name ${{ env.STACK_NAME }} exec -T backend alembic upgrade head

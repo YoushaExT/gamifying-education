@@ -1,0 +1,18 @@
+{
+  "question_text": "<p>What is the <strong>output</strong> of the following code?</p><pre><code class=\"language-javascript\">let x = 5;\n\nfunction demo() {\n  console.log(x);\n  let x = 10;\n}\n\ndemo();</code></pre><p></p>",
+  "choices": [
+      "A. 5",
+      "B. 10",
+      "C. undefined",
+      "D. ReferenceError"
+  ],
+  "correct_answers": [
+      "D"
+  ],
+  "subject": "javascript",
+  "topic": "scope",
+  "id": "e6959bf9-f95a-4820-aed9-dfbfa7b429c0",
+  "created_by": "9a8e9f6b-2473-4300-8d1c-2d9cdec2517d",
+  "created_at": "2025-11-23T19:41:27.404827",
+  "updated_at": "2025-11-23T19:41:27.404831"
+}

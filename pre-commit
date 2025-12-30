@@ -1,0 +1,34 @@
+#!/bin/bash
+# Pre-commit hook to prevent committing sensitive files
+#
+# Installation: Copy this file to .git/hooks/pre-commit and make it executable:
+#   cp pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+
+# Check if .env files are being committed
+if git diff --cached --name-only | grep -E "\.env$|\.env\..*"; then
+    echo "❌ ERROR: You are trying to commit .env files!"
+    echo ""
+    echo "The following .env files were detected:"
+    git diff --cached --name-only | grep -E "\.env$|\.env\..*"
+    echo ""
+    echo "Please unstage these files with: git reset HEAD <file>"
+    echo "Never commit .env files - use .env.example instead."
+    exit 1
+fi
+
+# Check for potential hardcoded secrets
+if git diff --cached | grep -iE "api[_-]?key|secret[_-]?key|password.*=.*['\"].*['\"]|sk-[a-zA-Z0-9]{32,}"; then
+    echo "⚠️  WARNING: Potential hardcoded secrets detected!"
+    echo ""
+    echo "Please review your changes for hardcoded API keys, passwords, or secrets."
+    echo "Consider using environment variables instead."
+    echo ""
+    read -p "Do you want to proceed anyway? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
+
+exit 0
