@@ -48,6 +48,7 @@ Required values:
 - `db_password` - Make one up
 - `first_superuser_password` - Your admin password
 - `openai_api_key` - From OpenAI
+- `github_token` - GitHub personal access token (only if repo is private)
 - Everything else has defaults
 
 ---

@@ -60,6 +60,8 @@ resource "aws_instance" "main" {
     ecr_repository_backend   = data.aws_ecr_repository.backend.name
     ecr_repository_frontend  = data.aws_ecr_repository.frontend.name
     hosted_zone_id           = var.route53_zone_id
+    github_repo_url          = var.github_repo_url
+    github_token             = var.github_token
   })
 
   # Enable detailed monitoring (Free Tier includes basic monitoring)

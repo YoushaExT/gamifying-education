@@ -66,6 +66,7 @@ Simple checklist - only the essentials.
   - [x] `db_password` (make one up)
   - [x] `first_superuser_password` (your admin password)
   - [x] `openai_api_key` (from OpenAI)
+  - [x] `github_token` (GitHub personal access token - only if repo is private)
 
 ---
 

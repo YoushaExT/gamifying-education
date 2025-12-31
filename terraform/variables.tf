@@ -120,6 +120,19 @@ variable "github_repo" {
   # Example: "yourusername/gamifying-education"
 }
 
+variable "github_repo_url" {
+  description = "GitHub repository URL for cloning"
+  type        = string
+  default     = "https://github.com/YoushaExT/gamifying-education.git"
+}
+
+variable "github_token" {
+  description = "GitHub personal access token for private repository (leave empty for public repos)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 # ECR Configuration (repositories managed in separate terraform-ecr project)
 variable "ecr_backend_repository_name" {
   description = "ECR repository name for backend (from terraform-ecr)"

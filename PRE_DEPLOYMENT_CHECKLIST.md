@@ -376,6 +376,7 @@ Test everything locally before deploying to AWS. Catch issues early!
   - `first_superuser_email` = "yousha234@gmail.com"
   - `first_superuser_password` = "secure-password"
   - `openai_api_key` = "sk-..."
+  - `github_token` = "ghp_..." (only if repository is private)
 
 ### 6.4 Get Route53 Zone ID
 - [x] List hosted zones

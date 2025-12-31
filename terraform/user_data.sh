@@ -82,14 +82,19 @@ echo "RDS endpoint: ${db_endpoint}"
 echo "=== Cloning repository ==="
 cd /opt
 if [ ! -d "gamifying-education" ]; then
-    # TODO: Update this URL to your actual repository URL
-    # Option 1: Public repository
-    git clone https://github.com/yourusername/gamifying-education.git || {
-        echo "ERROR: Failed to clone repository. Please update user_data.sh with correct repo URL"
+    # Construct repository URL with authentication if token provided
+    if [ -n "${github_token}" ]; then
+        # Private repo: inject token into URL
+        REPO_URL=$(echo "${github_repo_url}" | sed "s|https://|https://${github_token}@|")
+    else
+        # Public repo: use URL as-is
+        REPO_URL="${github_repo_url}"
+    fi
+
+    git clone $REPO_URL || {
+        echo "ERROR: Failed to clone repository from ${github_repo_url}"
         mkdir -p gamifying-education
     }
-    # Option 2: For private repo, use deploy token:
-    # git clone https://TOKEN@github.com/yourusername/gamifying-education.git
 else
     echo "Repository already exists, pulling latest changes"
     cd /opt/gamifying-education

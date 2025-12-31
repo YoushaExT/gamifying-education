@@ -40,3 +40,9 @@ admin_email = "yousha234@gmail.com" # For Let's Encrypt notifications
 
 # GitHub Configuration (for CI/CD with OIDC)
 github_repo = "YoushaExT/gamifying-education"  # Your GitHub repo in format "owner/repo"
+
+# GitHub Token (for private repositories only)
+# Create at: GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+# Required scopes: repo (full control of private repositories)
+# Leave empty if repository is public
+github_token = ""  # Your GitHub personal access token (keep private!)
