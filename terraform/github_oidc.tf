@@ -94,9 +94,7 @@ resource "aws_iam_role_policy" "github_actions_ssm" {
       {
         Effect = "Allow"
         Action = [
-          "ssm:SendCommand",
-          "ssm:GetCommandInvocation",
-          "ssm:ListCommandInvocations"
+          "ssm:SendCommand"
         ]
         Resource = [
           "arn:aws:ec2:${var.aws_region}:*:instance/${aws_instance.main.id}",
@@ -106,7 +104,22 @@ resource "aws_iam_role_policy" "github_actions_ssm" {
       {
         Effect = "Allow"
         Action = [
+          "ssm:GetCommandInvocation",
+          "ssm:ListCommandInvocations"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "ssm:DescribeInstanceInformation"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeInstances"
         ]
         Resource = "*"
       }
