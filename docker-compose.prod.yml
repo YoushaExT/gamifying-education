@@ -3,6 +3,8 @@ services:
     image: traefik:v2.11
     container_name: gamifying-education-traefik
     restart: unless-stopped
+    env_file:
+      - .env
     command:
       # API and dashboard
       - --api.dashboard=true
@@ -99,6 +101,8 @@ services:
     image: ${ECR_REGISTRY}/${ECR_REPOSITORY_FRONTEND}:latest
     container_name: gamifying-education-frontend
     restart: unless-stopped
+    env_file:
+      - .env
     depends_on:
       - backend
     networks:
