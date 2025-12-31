@@ -24,7 +24,6 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
     git \
     curl \
     wget \
-    awscli \
     build-essential \
     libpq-dev \
     postgresql-client \
@@ -32,7 +31,18 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
     ufw \
     ca-certificates \
     gnupg \
-    lsb-release
+    lsb-release \
+    unzip
+
+# Install AWS CLI v2 (not available in apt for ARM64)
+echo "=== Installing AWS CLI v2 ==="
+if ! command -v aws &> /dev/null; then
+    cd /tmp
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"
+    unzip -q awscliv2.zip
+    ./aws/install
+    rm -rf aws awscliv2.zip
+fi
 
 # Note: postgresql-client only (for connecting to RDS), not full postgresql server
 
@@ -131,11 +141,16 @@ pip install uv
 uv sync
 SETUP_VENV
 
-# Create .env file for backend
-echo "=== Creating backend .env file ==="
-cat > /opt/gamifying-education/backend/.env << 'EOF'
+# Create .env file at project root (where .env.example is)
+echo "=== Creating .env file ==="
+DB_HOST=$(echo "${db_endpoint}" | cut -d: -f1)
+cat > /opt/gamifying-education/.env << EOF
+# Project
+PROJECT_NAME=gamifying-education
+
 # Database (RDS)
-POSTGRES_SERVER=${db_endpoint}
+POSTGRES_SERVER=$DB_HOST
+POSTGRES_PORT=5432
 POSTGRES_DB=gamifying_education
 POSTGRES_USER=app_user
 POSTGRES_PASSWORD=${db_password}
@@ -161,7 +176,13 @@ FEATURE_QUIZ_TIMER=false
 # Email (disabled)
 SMTP_HOST=""
 EMAILS_ENABLED=false
+
+# Docker/Deployment specific
+DOMAIN=${domain_name}
 EOF
+
+# Fix ownership
+chown ubuntu:ubuntu /opt/gamifying-education/.env
 
 # Wait for RDS to be ready
 echo "=== Waiting for RDS database to be ready ==="
@@ -177,39 +198,32 @@ done
 
 # Run database migrations (as ubuntu user)
 echo "=== Running database migrations ==="
-sudo -u ubuntu bash << 'RUN_MIGRATIONS'
-cd /opt/gamifying-education/backend
-source .venv/bin/activate
-alembic upgrade head || {
+sudo -u ubuntu bash -c 'cd /opt/gamifying-education/backend && source .venv/bin/activate && alembic upgrade head' || {
     echo "WARNING: Migration failed, trying to initialize database"
-    alembic revision --autogenerate -m "Initial migration" || true
-    alembic upgrade head || true
+    sudo -u ubuntu bash -c 'cd /opt/gamifying-education/backend && source .venv/bin/activate && alembic revision --autogenerate -m "Initial migration"' || true
+    sudo -u ubuntu bash -c 'cd /opt/gamifying-education/backend && source .venv/bin/activate && alembic upgrade head' || true
 }
-RUN_MIGRATIONS
 
-# Create environment file for docker-compose
-echo "=== Creating docker-compose environment file ==="
-cat > /opt/gamifying-education/.env << 'ENV_FILE'
+# Add docker-compose specific variables to existing .env
+echo "=== Adding docker-compose configuration to .env ==="
+cat >> /opt/gamifying-education/.env << EOF
+
 # Docker image configuration
 ECR_REGISTRY=${ecr_registry}
 ECR_REPOSITORY_BACKEND=${ecr_repository_backend}
 ECR_REPOSITORY_FRONTEND=${ecr_repository_frontend}
 
-# Database configuration
-DB_HOST=${db_endpoint}
-DB_NAME=gamifying_education
-DB_USER=app_user
-DB_PASSWORD=${db_password}
-
 # Traefik configuration
-DOMAIN_NAME=${domain_name}
 ADMIN_EMAIL=${admin_email}
 
 # AWS configuration for Traefik Route 53 DNS challenge
 # Credentials automatically provided by EC2 instance IAM role
 AWS_REGION=${aws_region}
 AWS_HOSTED_ZONE_ID=${hosted_zone_id}
-ENV_FILE
+EOF
+
+# Fix ownership again
+chown ubuntu:ubuntu /opt/gamifying-education/.env
 
 # Note: For initial deployment without ECR images, we need to build locally
 # This will be replaced by ECR images during CI/CD deployments
@@ -217,7 +231,7 @@ ENV_FILE
 # Setup automatic security updates
 echo "=== Configuring automatic security updates ==="
 DEBIAN_FRONTEND=noninteractive apt-get install -y unattended-upgrades
-dpkg-reconfigure -plow unattended-upgrades
+DEBIAN_FRONTEND=noninteractive dpkg-reconfigure -plow unattended-upgrades
 
 # Create helper scripts
 echo "=== Creating helper scripts ==="
