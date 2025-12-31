@@ -1,0 +1,7 @@
+# Copy this file to terraform.tfvars and fill in your values
+
+aws_region    = "us-east-1"
+aws_profile   = "personal-terraform"       # Your AWS CLI profile name
+ssh_key_name  = "gamifying-education-key"  # Your SSH key name from AWS
+instance_type = "t2.micro"                 # Free tier eligible (x86)
+# Or use "t3.micro" for a bit more power

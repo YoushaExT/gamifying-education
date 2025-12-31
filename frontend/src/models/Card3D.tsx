@@ -115,7 +115,6 @@ export function Card3D({
       onClick={isPlayable ? onClick : undefined}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
-      style={{ cursor: isPlayable ? "pointer" : "default" }}
     >
       {/* Card background */}
       <mesh>

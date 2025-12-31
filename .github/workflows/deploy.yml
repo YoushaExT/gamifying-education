@@ -1,0 +1,198 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main  # Deploy when pushing to main branch
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  AWS_REGION: us-east-1
+  PROJECT_NAME: gamifying-education
+  ECR_REPOSITORY_BACKEND: gamifying-education-backend
+  ECR_REPOSITORY_FRONTEND: gamifying-education-frontend
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write  # Required for OIDC
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Discover AWS Role ARN dynamically
+      - name: Get AWS Account ID
+        id: get-account
+        run: |
+          # GitHub repo format: owner/repo
+          GITHUB_REPO="${{ github.repository }}"
+          echo "GITHUB_REPO=$GITHUB_REPO" >> $GITHUB_ENV
+
+          # Construct role ARN (will be validated when assuming)
+          AWS_ACCOUNT_ID="214543393762"  # Your AWS account
+          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${PROJECT_NAME}-github-actions-role"
+          echo "ROLE_ARN=$ROLE_ARN" >> $GITHUB_ENV
+          echo "Role ARN: $ROLE_ARN"
+
+      # Configure AWS credentials using OIDC (no access keys needed!)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Set up Docker Buildx for multi-platform builds
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Login to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Discover EC2 instance ID dynamically
+      - name: Get EC2 Instance ID
+        id: get-instance
+        run: |
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters \
+              "Name=instance-state-name,Values=running" \
+              "Name=tag:Name,Values=${PROJECT_NAME}-instance" \
+            --query 'Reservations[0].Instances[0].InstanceId' \
+            --output text)
+
+          if [ "$INSTANCE_ID" = "None" ] || [ -z "$INSTANCE_ID" ]; then
+            echo "❌ No running EC2 instance found with tag Name=${PROJECT_NAME}-instance"
+            exit 1
+          fi
+
+          echo "EC2_INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_ENV
+          echo "Found EC2 Instance: $INSTANCE_ID"
+
+      # Build and push backend Docker image
+      - name: Build and push backend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd backend
+          docker buildx build --platform linux/arm64 \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:latest \
+            --push \
+            .
+
+      # Build and push frontend Docker image
+      - name: Build and push frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd frontend
+          docker buildx build --platform linux/arm64 \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:latest \
+            -f Dockerfile.prod \
+            --push \
+            .
+
+      # Deploy to EC2 using SSM Session Manager (no SSH keys needed!)
+      - name: Deploy to EC2
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Send commands to EC2 via SSM
+          echo "Deploying to instance: ${{ env.EC2_INSTANCE_ID }}"
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids ${{ env.EC2_INSTANCE_ID }} \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy new version" \
+            --parameters commands="[
+              \"cd /opt/gamifying-education\",
+              \"git pull origin main || true\",
+              \"aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}\",
+              \"docker compose -f docker-compose.prod.yml pull\",
+              \"docker compose -f docker-compose.prod.yml up -d --remove-orphans\",
+              \"docker system prune -af --volumes=false\",
+              \"echo 'Waiting for services to be healthy...'\",
+              \"sleep 15\",
+              \"docker compose -f docker-compose.prod.yml ps\"
+            ]" \
+            --output text \
+            --query 'Command.CommandId')
+
+          echo "Command ID: $COMMAND_ID"
+          echo "COMMAND_ID=$COMMAND_ID" >> $GITHUB_ENV
+
+      - name: Wait for deployment to complete
+        run: |
+          echo "Waiting for deployment command to complete..."
+          MAX_WAIT=300  # 5 minutes max
+          ELAPSED=0
+          SLEEP_INTERVAL=10
+
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id ${{ env.COMMAND_ID }} \
+              --instance-id ${{ env.EC2_INSTANCE_ID }} \
+              --query 'Status' \
+              --output text 2>/dev/null || echo "Pending")
+
+            echo "[$ELAPSED s] Deployment status: $STATUS"
+
+            # Check if command completed (success or failure)
+            if [ "$STATUS" = "Success" ] || [ "$STATUS" = "Failed" ] || [ "$STATUS" = "TimedOut" ] || [ "$STATUS" = "Cancelled" ]; then
+              echo "Command completed with status: $STATUS"
+              break
+            fi
+
+            sleep $SLEEP_INTERVAL
+            ELAPSED=$((ELAPSED + SLEEP_INTERVAL))
+          done
+
+          if [ $ELAPSED -ge $MAX_WAIT ]; then
+            echo "⚠️  Timeout waiting for deployment to complete"
+          fi
+
+      - name: Verify deployment
+        run: |
+          echo "Checking deployment status for commit ${{ github.sha }}"
+
+          # Get command status
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id ${{ env.COMMAND_ID }} \
+            --instance-id ${{ env.EC2_INSTANCE_ID }} \
+            --query 'Status' \
+            --output text)
+
+          echo "Final deployment status: $STATUS"
+
+          # Get command output
+          echo ""
+          echo "=== Deployment Output ==="
+          aws ssm get-command-invocation \
+            --command-id ${{ env.COMMAND_ID }} \
+            --instance-id ${{ env.EC2_INSTANCE_ID }} \
+            --query 'StandardOutputContent' \
+            --output text
+
+          # Check if command succeeded
+          if [ "$STATUS" != "Success" ]; then
+            echo ""
+            echo "❌ Deployment failed!"
+            echo "=== Error Output ==="
+            aws ssm get-command-invocation \
+              --command-id ${{ env.COMMAND_ID }} \
+              --instance-id ${{ env.EC2_INSTANCE_ID }} \
+              --query 'StandardErrorContent' \
+              --output text
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ Deployment successful!"

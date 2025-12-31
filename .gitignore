@@ -20,6 +20,7 @@ eggs/
 .eggs/
 lib/
 lib64/
+!frontend/src/lib/
 parts/
 sdist/
 var/
@@ -153,3 +154,31 @@ credentials/
 # Alembic
 # Optionally ignore local alembic.ini if you have environment-specific configs
 # alembic.ini
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.*
+terraform/terraform.tfstate.backup
+terraform/terraform.tfvars
+terraform/*.auto.tfvars
+terraform/crash.log
+terraform/crash.*.log
+terraform/override.tf
+terraform/override.tf.json
+terraform/*_override.tf
+terraform/*_override.tf.json
+
+# Terraform Test
+terraform-test/.terraform/
+terraform-test/.terraform.lock.hcl
+terraform-test/terraform.tfstate
+terraform-test/terraform.tfstate.*
+terraform-test/terraform.tfstate.backup
+terraform-test/terraform.tfvars
+terraform-test/*.auto.tfvars
+
+# Deployment reference (old template files - not used)
+deployment-reference/.env*
+deployment-reference/docker-compose.*

@@ -1,351 +1,422 @@
-# FastAPI Project - Deployment
+# Deployment Guide
 
-You can deploy the project using Docker Compose to a remote server.
+## Prerequisites
 
-This project expects you to have a Traefik proxy handling communication to the outside world and HTTPS certificates.
+1. AWS account with configured credentials
+2. Terraform installed
+3. Docker installed locally
+4. AWS CLI configured
 
-You can use CI/CD (continuous integration and continuous deployment) systems to deploy automatically, there are already configurations to do it with GitHub Actions.
+## Initial Setup: Building and Pushing Docker Images to ECR
 
-But you have to configure a couple things first. 🤓
+**IMPORTANT**: Before running `terraform apply`, you must build and push Docker images to ECR. The EC2 instance expects these images to exist.
 
-## Preparation
-
-* Have a remote server ready and available.
-* Configure the DNS records of your domain to point to the IP of the server you just created.
-* Configure a wildcard subdomain for your domain, so that you can have multiple subdomains for different services, e.g. `*.fastapi-project.example.com`. This will be useful for accessing different components, like `dashboard.fastapi-project.example.com`, `api.fastapi-project.example.com`, `traefik.fastapi-project.example.com`, `adminer.fastapi-project.example.com`, etc. And also for `staging`, like `dashboard.staging.fastapi-project.example.com`, `adminer.staging.fastapi-project.example.com`, etc.
-* Install and configure [Docker](https://docs.docker.com/engine/install/) on the remote server (Docker Engine, not Docker Desktop).
-
-## Public Traefik
-
-We need a Traefik proxy to handle incoming connections and HTTPS certificates.
-
-You need to do these next steps only once.
-
-### Traefik Docker Compose
-
-* Create a remote directory to store your Traefik Docker Compose file:
+### Step 1: Authenticate with ECR
 
 ```bash
-mkdir -p /root/code/traefik-public/
+# Get your AWS account ID
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+AWS_REGION="us-east-1"  # Change to your region
+
+# Login to ECR
+aws ecr get-login-password --region $AWS_REGION | \
+  docker login --username AWS --password-stdin \
+  $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 ```
 
-Copy the Traefik Docker Compose file to your server. You could do it by running the command `rsync` in your local terminal:
+### Step 2: Build Docker Images Locally
 
 ```bash
-rsync -a docker-compose.traefik.yml root@your-server.example.com:/root/code/traefik-public/
+cd /path/to/gamifying-education
+
+# Build backend image
+docker build -t gamifying-education-backend:latest ./backend
+
+# Build frontend image
+docker build -t gamifying-education-frontend:latest ./frontend
 ```
 
-### Traefik Public Network
-
-This Traefik will expect a Docker "public network" named `traefik-public` to communicate with your stack(s).
-
-This way, there will be a single public Traefik proxy that handles the communication (HTTP and HTTPS) with the outside world, and then behind that, you could have one or more stacks with different domains, even if they are on the same single server.
-
-To create a Docker "public network" named `traefik-public` run the following command in your remote server:
+### Step 3: Tag Images for ECR
 
 ```bash
-docker network create traefik-public
+# Set ECR repository URLs
+ECR_BACKEND="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/gamifying-education-backend"
+ECR_FRONTEND="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/gamifying-education-frontend"
+
+# Tag images
+docker tag gamifying-education-backend:latest $ECR_BACKEND:latest
+docker tag gamifying-education-frontend:latest $ECR_FRONTEND:latest
 ```
 
-### Traefik Environment Variables
-
-The Traefik Docker Compose file expects some environment variables to be set in your terminal before starting it. You can do it by running the following commands in your remote server.
-
-* Create the username for HTTP Basic Auth, e.g.:
+### Step 4: Push Images to ECR
 
 ```bash
-export USERNAME=admin
+# Push backend
+docker push $ECR_BACKEND:latest
+
+# Push frontend
+docker push $ECR_FRONTEND:latest
 ```
 
-* Create an environment variable with the password for HTTP Basic Auth, e.g.:
-
-```bash
-export PASSWORD=changethis
+**Expected output**:
+```
+The push refers to repository [123456789012.dkr.ecr.us-east-1.amazonaws.com/gamifying-education-backend]
+abc123def456: Pushed
+latest: digest: sha256:... size: 1234
 ```
 
-* Use openssl to generate the "hashed" version of the password for HTTP Basic Auth and store it in an environment variable:
+### Step 5: Verify Images in ECR
 
 ```bash
-export HASHED_PASSWORD=$(openssl passwd -apr1 $PASSWORD)
+# List backend images
+aws ecr describe-images \
+  --repository-name gamifying-education-backend \
+  --region $AWS_REGION
+
+# List frontend images
+aws ecr describe-images \
+  --repository-name gamifying-education-frontend \
+  --region $AWS_REGION
 ```
 
-To verify that the hashed password is correct, you can print it:
+You should see images with `latest` tag.
+
+## Deploying Infrastructure
+
+Now that images are in ECR, you can deploy the main infrastructure:
 
 ```bash
-echo $HASHED_PASSWORD
+cd terraform
+terraform init
+terraform apply
 ```
 
-* Create an environment variable with the domain name for your server, e.g.:
+The EC2 instance will automatically:
+1. ✅ Authenticate with ECR using IAM role
+2. ✅ Check that images exist (will fail gracefully if not)
+3. ✅ Pull images with `docker compose pull`
+4. ✅ Start services with `docker compose up -d`
+5. ✅ Backend container runs migrations automatically
 
-```bash
-export DOMAIN=fastapi-project.example.com
+### What Happens During Deployment
+
+```
+EC2 Instance Initialization:
+├─ Install Docker & AWS CLI
+├─ Clone repository
+├─ Create .env file
+├─ Authenticate with ECR
+├─ Check images exist in ECR
+│  ├─ ✓ Found → Continue
+│  └─ ✗ Not found → Pause with instructions
+├─ Pull images from ECR
+├─ Start services with docker compose
+│  ├─ Traefik (reverse proxy + SSL)
+│  ├─ Backend (FastAPI)
+│  │  └─ Runs migrations automatically
+│  └─ Frontend (React + Nginx)
+└─ Wait for services to be healthy
 ```
 
-* Create an environment variable with the email for Let's Encrypt, e.g.:
+## Troubleshooting
+
+### "ECR images not found" Error
+
+If you see this error in `/var/log/user-data.log`:
+
+**Cause**: Images weren't pushed to ECR before terraform apply.
+
+**Fix**: Follow Steps 1-4 above, then:
 
 ```bash
-export EMAIL=admin@example.com
+# SSH into instance
+ssh -i ~/.ssh/your-key.pem ubuntu@<instance-ip>
+
+# Pull images and start services
+cd /opt/gamifying-education
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+
+# Check status
+docker compose -f docker-compose.prod.yml ps
 ```
 
-**Note**: you need to set a different email, an email `@example.com` won't work.
+### Backend Container Fails to Start
 
-### Start the Traefik Docker Compose
-
-Go to the directory where you copied the Traefik Docker Compose file in your remote server:
-
+**Check logs**:
 ```bash
-cd /root/code/traefik-public/
-```
-
-Now with the environment variables set and the `docker-compose.traefik.yml` in place, you can start the Traefik Docker Compose running the following command:
-
-```bash
-docker compose -f docker-compose.traefik.yml up -d
-```
-
-## Deploy the FastAPI Project
-
-Now that you have Traefik in place you can deploy your FastAPI project with Docker Compose.
-
-**Note**: You might want to jump ahead to the section about Continuous Deployment with GitHub Actions.
-
-## Environment Variables
-
-You need to set some environment variables first.
-
-Set the `ENVIRONMENT`, by default `local` (for development), but when deploying to a server you would put something like `staging` or `production`:
-
-```bash
-export ENVIRONMENT=production
-```
-
-Set the `DOMAIN`, by default `localhost` (for development), but when deploying you would use your own domain, for example:
-
-```bash
-export DOMAIN=fastapi-project.example.com
-```
-
-You can set several variables, like:
-
-* `PROJECT_NAME`: The name of the project, used in the API for the docs and emails.
-* `STACK_NAME`: The name of the stack used for Docker Compose labels and project name, this should be different for `staging`, `production`, etc. You could use the same domain replacing dots with dashes, e.g. `fastapi-project-example-com` and `staging-fastapi-project-example-com`.
-* `BACKEND_CORS_ORIGINS`: A list of allowed CORS origins separated by commas.
-* `SECRET_KEY`: The secret key for the FastAPI project, used to sign tokens.
-* `FIRST_SUPERUSER`: The email of the first superuser, this superuser will be the one that can create new users.
-* `FIRST_SUPERUSER_PASSWORD`: The password of the first superuser.
-* `SMTP_HOST`: The SMTP server host to send emails, this would come from your email provider (E.g. Mailgun, Sparkpost, Sendgrid, etc).
-* `SMTP_USER`: The SMTP server user to send emails.
-* `SMTP_PASSWORD`: The SMTP server password to send emails.
-* `EMAILS_FROM_EMAIL`: The email account to send emails from.
-* `POSTGRES_SERVER`: The hostname of the PostgreSQL server. You can leave the default of `db`, provided by the same Docker Compose. You normally wouldn't need to change this unless you are using a third-party provider.
-* `POSTGRES_PORT`: The port of the PostgreSQL server. You can leave the default. You normally wouldn't need to change this unless you are using a third-party provider.
-* `POSTGRES_PASSWORD`: The Postgres password.
-* `POSTGRES_USER`: The Postgres user, you can leave the default.
-* `POSTGRES_DB`: The database name to use for this application. You can leave the default of `app`.
-* `SENTRY_DSN`: The DSN for Sentry, if you are using it.
-
-### Generate secret keys
-
-Some environment variables in the `.env` file have a default value of `changethis`.
-
-You have to change them with a secret key, to generate secret keys you can run the following command:
-
-```bash
-python -c "import secrets; print(secrets.token_urlsafe(32))"
-```
-
-Copy the content and use that as password / secret key. And run that again to generate another secure key.
-
-### Deploy with Docker Compose
-
-With the environment variables in place, you can deploy with Docker Compose:
-
-```bash
-docker compose -f docker-compose.yml up -d
-```
-
-For production you wouldn't want to have the overrides in `docker-compose.override.yml`, that's why we explicitly specify `docker-compose.yml` as the file to use.
-
-## Continuous Deployment (CD)
-
-You can use GitHub Actions to deploy your project automatically. 😎
-
-You can have multiple environment deployments.
-
-There are already two environments configured, `staging` and `production`. 🚀
-
-### Prepare Server for SSH Deployment
-
-The deployment workflows use GitHub-hosted runners that deploy to your server via SSH.
-
-#### 1. Prepare Your Remote Server
-
-Ensure your server meets these requirements:
-
-```bash
-# Install Docker Engine (not Docker Desktop)
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Verify Docker installation
-docker --version
-docker compose version
-
-# Create deployment user
-sudo adduser github
-sudo usermod -aG docker github
-
-# Configure firewall (if using UFW)
-sudo ufw allow 22/tcp   # SSH
-sudo ufw allow 80/tcp   # HTTP
-sudo ufw allow 443/tcp  # HTTPS
-```
-
-#### 2. Set Up SSH Authentication
-
-Generate SSH key pair for GitHub Actions:
-
-```bash
-# On your local machine
-ssh-keygen -t ed25519 -C "github-actions" -f ~/.ssh/github-actions-deploy
-
-# Copy public key to server
-ssh-copy-id -i ~/.ssh/github-actions-deploy.pub github@your-server.example.com
-
-# Test connection
-ssh -i ~/.ssh/github-actions-deploy github@your-server.example.com
-```
-
-#### 3. Prepare Deployment Directory
-
-On your server:
-
-```bash
-# For production
-mkdir -p /home/github/gamifying-education
-chown github:github /home/github/gamifying-education
-
-# For staging (if using separate environment)
-mkdir -p /home/github/gamifying-education-staging
-chown github:github /home/github/gamifying-education-staging
-```
-
-### Set Secrets
-
-On your repository, configure secrets for the environment variables you need, the same ones described above, including `SECRET_KEY`, etc. Follow the [official GitHub guide for setting repository secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#creating-secrets-for-a-repository).
-
-The current Github Actions workflows expect these secrets:
-
-**Required for Production**:
-* `PRODUCTION_HOST` - Production server IP or hostname
-* `PRODUCTION_USER` - SSH username for production (e.g., `github`)
-* `PRODUCTION_SSH_KEY` - Contents of private SSH key for production
-* `DOMAIN_PRODUCTION` - Production domain (e.g., `example.com`)
-* `STACK_NAME_PRODUCTION` - Docker Compose project name (e.g., `gamifying-education-prod`)
-
-**Required for Staging** (if using):
-* `STAGING_HOST` - Staging server IP or hostname
-* `STAGING_USER` - SSH username for staging
-* `STAGING_SSH_KEY` - Contents of private SSH key for staging
-* `DOMAIN_STAGING` - Staging domain (e.g., `staging.example.com`)
-* `STACK_NAME_STAGING` - Docker Compose project name (e.g., `gamifying-education-staging`)
-
-**Required for Both**:
-* `SECRET_KEY` - JWT signing key (generate with Python secrets)
-* `FIRST_SUPERUSER` - Admin email (e.g., `admin@example.com`)
-* `FIRST_SUPERUSER_PASSWORD` - Admin password (generate with Python secrets)
-* `POSTGRES_PASSWORD` - Database password (generate with Python secrets)
-* `OPENAI_API_KEY` - OpenAI API key for AI question generation (get from https://platform.openai.com/api-keys)
-* `EMAILS_FROM_EMAIL` - Email sender address (e.g., `noreply@example.com`)
-
-**Optional**:
-* `SMTP_HOST` - SMTP server (e.g., `smtp.gmail.com`)
-* `SMTP_USER` - SMTP username
-* `SMTP_PASSWORD` - SMTP password
-* `SENTRY_DSN` - Sentry error tracking DSN
-
-## GitHub Action Deployment Workflows
-
-There are GitHub Action workflows in the `.github/workflows` directory configured for automated deployment:
-
-* **`deploy-staging.yml`**: Deploys to staging environment on push to `master` branch
-* **`deploy-production.yml`**: Deploys to production environment on release publication
-
-### How It Works
-
-1. **Build**: GitHub Actions builds Docker images on GitHub-hosted runners
-2. **Transfer**: Images are transferred to your server via SCP
-3. **Deploy**: Server loads images and starts services via SSH
-4. **Migrate**: Database migrations run automatically
-
-### Deploying to Staging
-
-Simply push to the `master` branch:
-
-```bash
-git push origin master
-```
-
-Watch the deployment in the Actions tab of your GitHub repository.
-
-### Deploying to Production
-
-Create and publish a release:
-
-1. Go to GitHub → Releases → Draft a new release
-2. Create a new tag (e.g., `v1.0.0`)
-3. Add release notes
-4. Click "Publish release"
-
-The deployment will start automatically.
-
-### Troubleshooting
-
-**View deployment logs**:
-- On GitHub: Actions tab → Click workflow run
-
-**On server**:
-```bash
-# View running containers
-docker compose --project-name gamifying-education-prod ps
-
-# View logs
-docker compose --project-name gamifying-education-prod logs -f
-
-# Check specific service
-docker compose --project-name gamifying-education-prod logs -f backend
+docker compose -f docker-compose.prod.yml logs backend
 ```
 
 **Common issues**:
+- **Database not ready**: Wait 5-10 minutes for RDS initialization
+- **Migration failure**: Check database credentials in `.env`
+- **Missing environment variables**: Verify all required vars in `.env`
 
-1. **SSH connection fails**: Verify SSH key is correct in GitHub secrets (must be private key, not public)
-2. **Docker Compose fails**: Manually test on server: `docker compose --project-name <stack-name> up -d`
-3. **Environment variables missing**: Verify all required secrets are set in GitHub repository settings
+### Images Fail to Pull
 
-## URLs
+**Cause**: IAM permissions issue.
 
-Replace `fastapi-project.example.com` with your domain.
+**Check IAM role**:
+```bash
+# Verify IAM role has ECR permissions
+aws sts get-caller-identity
 
-### Main Traefik Dashboard
+# Test ECR access
+aws ecr describe-repositories --region us-east-1
+```
 
-Traefik UI: `https://traefik.fastapi-project.example.com`
+**Fix**: Ensure EC2 instance IAM role has ECR read permissions (should be in `terraform/iam.tf`).
 
-### Production
+### Traefik SSL Certificate Issues
 
-Frontend: `https://dashboard.fastapi-project.example.com`
+**Check Traefik logs**:
+```bash
+docker compose -f docker-compose.prod.yml logs traefik
+```
 
-Backend API docs: `https://api.fastapi-project.example.com/docs`
+**Common issues**:
+- **Route 53 DNS challenge fails**: Verify IAM role has Route 53 permissions
+- **Domain not resolving**: Check Route 53 A record points to EC2 instance
+- **Rate limit**: Let's Encrypt has rate limits; wait before retrying
 
-Backend API base URL: `https://api.fastapi-project.example.com`
+## Architecture: What Runs Where
 
-Adminer: `https://adminer.fastapi-project.example.com`
+### On EC2 Host (Minimal)
+- Docker Engine
+- AWS CLI
+- Git
+- **That's it!**
 
-### Staging
+### Inside Docker Containers
+- **Backend** (Python + FastAPI + alembic)
+  - Runs migrations automatically on startup
+  - All Python dependencies installed in container
+  - No Python needed on host
+- **Frontend** (React + Nginx)
+  - Built during Docker build process
+  - Served by Nginx
+- **Traefik** (Reverse proxy)
+  - SSL/TLS termination with Let's Encrypt
+  - Routes requests to backend/frontend
+- **Database** (PostgreSQL on RDS)
+  - Managed by AWS
+  - No PostgreSQL client on host
 
-Frontend: `https://dashboard.staging.fastapi-project.example.com`
+### Why This Approach?
 
-Backend API docs: `https://api.staging.fastapi-project.example.com/docs`
+**Advantages**:
+- ✅ Clean separation: Host only runs Docker
+- ✅ No Python/Node on host = simpler security patching
+- ✅ Identical environments (dev/staging/prod)
+- ✅ Easy rollbacks: just pull previous image tag
+- ✅ Migrations run automatically in container
+- ✅ No version conflicts between host and containers
 
-Backend API base URL: `https://api.staging.fastapi-project.example.com`
+**Previous Issues** (now fixed):
+- ❌ Had to install Python on host AND in container
+- ❌ Ran migrations on host AND in container (race conditions)
+- ❌ Had to keep host Python version in sync with container
+- ❌ More packages to patch and maintain on host
 
-Adminer: `https://adminer.staging.fastapi-project.example.com`
+## CI/CD: Automated Deployments
+
+Once initial setup is complete, use GitHub Actions for automated deployments:
+
+### Workflow
+1. Push code to GitHub
+2. GitHub Actions builds Docker images
+3. Push images to ECR
+4. Trigger deployment on EC2 (via SSH or webhook)
+
+### Deployment Command
+
+On EC2, use the helper script:
+
+```bash
+app-deploy
+```
+
+This will:
+1. Pull latest code from GitHub
+2. Authenticate with ECR
+3. Pull latest Docker images
+4. Restart services with `docker compose up -d`
+
+### Manual Deployment
+
+If you need to deploy manually:
+
+```bash
+# SSH into EC2
+ssh -i ~/.ssh/your-key.pem ubuntu@<instance-ip>
+
+# Navigate to project
+cd /opt/gamifying-education
+
+# Pull latest code
+git pull
+
+# Authenticate with ECR
+aws ecr get-login-password --region us-east-1 | \
+  docker login --username AWS --password-stdin <ecr-registry>
+
+# Pull and restart
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+
+# Check status
+docker compose -f docker-compose.prod.yml ps
+```
+
+## Helper Commands
+
+The EC2 instance has several helper commands installed:
+
+### app-status
+Check application status (containers, logs, resources):
+```bash
+app-status
+```
+
+### app-deploy
+Deploy latest changes from ECR:
+```bash
+app-deploy
+```
+
+### app-restart
+Restart all services:
+```bash
+app-restart
+```
+
+### app-logs
+View logs (optionally specify service):
+```bash
+app-logs              # All services
+app-logs backend      # Backend only
+app-logs frontend     # Frontend only
+app-logs traefik      # Traefik only
+```
+
+## Deployment Workflow Diagram
+
+### Initial Deployment
+```
+Local Machine                  AWS ECR                      EC2 Instance
+─────────────                  ───────                      ────────────
+1. docker build     ──────>    2. docker push    ──────>   3. docker compose pull
+   (backend + frontend)           (store images)               (fetch images)
+
+                                                           4. docker compose up -d
+                                                              ├─ DB health check
+                                                              ├─ Run migrations (auto)
+                                                              ├─ Start backend
+                                                              └─ Start frontend
+```
+
+### Subsequent Deployments
+```
+GitHub Actions                 AWS ECR                      EC2 Instance
+──────────────                 ───────                      ────────────
+1. Build on push    ──────>    2. Push to ECR    ──────>   3. app-deploy command
+   (CI pipeline)                  (update images)              ├─ docker compose pull
+                                                              └─ docker compose up -d
+```
+
+## Accessing Your Application
+
+Once deployment completes:
+
+- **Application URL**: `https://your-domain.com`
+- **API Docs**: `https://your-domain.com/docs`
+- **Health Check**: `https://your-domain.com/api/v1/utils/health-check/`
+
+Default credentials are set in `terraform.tfvars`:
+- **Email**: Value of `first_superuser_email`
+- **Password**: Value of `first_superuser_password`
+
+## Monitoring
+
+### Check Service Status
+```bash
+docker compose -f docker-compose.prod.yml ps
+```
+
+### View Logs
+```bash
+# All services
+docker compose -f docker-compose.prod.yml logs -f
+
+# Specific service
+docker compose -f docker-compose.prod.yml logs -f backend
+```
+
+### Check Resources
+```bash
+docker stats
+```
+
+### EC2 System Logs
+```bash
+# User data script logs
+tail -f /var/log/user-data.log
+
+# Cloud-init logs
+tail -f /var/log/cloud-init-output.log
+```
+
+## Rollback
+
+To rollback to a previous version:
+
+```bash
+# SSH into EC2
+ssh -i ~/.ssh/your-key.pem ubuntu@<instance-ip>
+
+cd /opt/gamifying-education
+
+# Pull specific image tag
+docker pull <ecr-registry>/gamifying-education-backend:v1.0.0
+docker pull <ecr-registry>/gamifying-education-frontend:v1.0.0
+
+# Update docker-compose to use specific tags (or use tag in .env)
+docker compose -f docker-compose.prod.yml up -d
+
+# Check status
+docker compose -f docker-compose.prod.yml ps
+```
+
+## Security Notes
+
+1. **Secrets Management**: Sensitive values are stored in `terraform.tfvars` (gitignored)
+2. **SSL/TLS**: Automatic with Let's Encrypt + Traefik
+3. **Firewall**: UFW configured to allow only 22, 80, 443
+4. **IAM Roles**: EC2 uses IAM roles (no AWS credentials on instance)
+5. **Security Updates**: Unattended upgrades configured automatically
+
+## Cost Optimization
+
+- **Free Tier**: t4g.micro EC2, 30GB storage, 20GB RDS storage
+- **ECR**: First 500 MB/month free, then $0.10/GB
+- **Data Transfer**: First 100 GB/month free
+
+After free tier:
+- **EC2 t4g.micro**: ~$7/month
+- **RDS db.t4g.micro**: ~$12/month
+- **ECR Storage**: ~$0.50/month (for ~5GB images)
+- **Total**: ~$20/month
+
+## Next Steps
+
+1. ✅ Configure custom domain in Route 53
+2. ✅ Set up GitHub Actions for CI/CD
+3. ✅ Configure monitoring/alerting (CloudWatch)
+4. ✅ Set up database backups (RDS automated backups)
+5. ✅ Configure log aggregation (CloudWatch Logs)
+
+For more details, see:
+- **Development Setup**: `development.md`
+- **Project Structure**: `PROJECT_STRUCTURE.md`
+- **CLAUDE.md**: AI assistant guidelines
