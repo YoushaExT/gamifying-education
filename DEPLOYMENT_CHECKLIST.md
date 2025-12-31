@@ -9,8 +9,8 @@ Simple checklist - only the essentials.
 ## One-Time Setup (First Deployment Only)
 
 ### AWS Setup
-- [ ] AWS CLI installed: `aws --version`
-- [ ] AWS credentials configured (profile: `personal-terraform`)
+- [x] AWS CLI installed: `aws --version`
+- [x] AWS credentials configured (profile: `personal-terraform`)
   ```bash
   aws configure --profile personal-terraform
   ```
@@ -19,7 +19,7 @@ Simple checklist - only the essentials.
 
 **IMPORTANT**: ECR repositories must be deployed BEFORE main infrastructure!
 
-- [ ] Deploy ECR repositories:
+- [x] Deploy ECR repositories:
   ```bash
   cd terraform-ecr
   cp terraform.tfvars.example terraform.tfvars
@@ -29,7 +29,7 @@ Simple checklist - only the essentials.
   # Type: yes
   ```
 
-- [ ] Verify ECR repos created:
+- [x] Verify ECR repos created:
   ```bash
   terraform output
   # Should show backend and frontend repository URLs
@@ -41,35 +41,44 @@ Simple checklist - only the essentials.
 
 **Note**: Domain bought from AWS = hosted zone and nameservers already configured!
 
-- [ ] Get zone ID:
+- [x] Get zone ID:
   ```bash
   aws route53 list-hosted-zones --profile personal-terraform | grep yousha.click -A 5
   # Copy the zone ID (looks like Z1234567890ABC)
   ```
 
-- [ ] Verify nameservers already point to AWS (optional check):
+- [x] Verify nameservers already point to AWS (optional check):
   ```bash
   dig yousha.click NS +short
   # Should show AWS nameservers (already done)
   ```
 
 ### Terraform Setup
-- [ ] Create terraform.tfvars:
+- [x] Create terraform.tfvars:
   ```bash
   cd terraform
   cp terraform.tfvars.example terraform.tfvars
   vim terraform.tfvars
   ```
 
-- [ ] Fill in required values:
-  - [ ] `route53_zone_id` (from above)
-  - [ ] `db_password` (make one up)
-  - [ ] `first_superuser_password` (your admin password)
-  - [ ] `openai_api_key` (from OpenAI)
+- [x] Fill in required values:
+  - [x] `route53_zone_id` (from above)
+  - [x] `db_password` (make one up)
+  - [x] `first_superuser_password` (your admin password)
+  - [x] `openai_api_key` (from OpenAI)
 
 ---
 
 ## Deploy
+
+- [x] **If GitHub OIDC provider already exists** (skip if first time):
+  ```bash
+  cd terraform
+  terraform import aws_iam_openid_connect_provider.github \
+    arn:aws:iam::$(aws sts get-caller-identity --query Account --output text --profile personal-terraform):oidc-provider/token.actions.githubusercontent.com
+  ```
+
+  **Note**: Only needed if you get "EntityAlreadyExists" error. Safe to run even if not needed.
 
 - [ ] Run deployment:
   ```bash
@@ -116,6 +125,20 @@ vim SOME_FILE.tf
 terraform apply -target=RESOURCE_NAME
 
 # See TERRAFORM_DEBUGGING.md for details
+```
+
+### Common Error: GitHub OIDC Provider Already Exists
+
+**Error**: `EntityAlreadyExists: Provider with url https://token.actions.githubusercontent.com already exists`
+
+**Solution**:
+```bash
+cd terraform
+terraform import aws_iam_openid_connect_provider.github \
+  arn:aws:iam::$(aws sts get-caller-identity --query Account --output text --profile personal-terraform):oidc-provider/token.actions.githubusercontent.com
+
+# Then retry apply
+terraform apply
 ```
 
 ---

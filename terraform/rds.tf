@@ -32,7 +32,7 @@ resource "aws_security_group" "rds" {
 resource "aws_db_instance" "main" {
   identifier     = "${var.project_name}-db"
   engine         = "postgres"
-  engine_version = "16.4"
+  engine_version = "16.11"
 
   # Instance configuration
   instance_class        = var.db_instance_class
@@ -86,20 +86,12 @@ resource "aws_db_parameter_group" "main" {
   name   = "${var.project_name}-postgres16"
   family = "postgres16"
 
-  # Optimize for small workload
+  # Use AWS defaults for db.t4g.micro (1GB RAM)
+  # Custom memory settings don't work well with small instances
   parameter {
-    name  = "shared_buffers"
-    value = "256MB"
-  }
-
-  parameter {
-    name  = "max_connections"
-    value = "100"
-  }
-
-  parameter {
-    name  = "effective_cache_size"
-    value = "768MB"
+    name         = "max_connections"
+    value        = "50"             # Reduced for small instance
+    apply_method = "pending-reboot" # Static parameter, requires reboot
   }
 
   tags = {

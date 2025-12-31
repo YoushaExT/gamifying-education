@@ -70,7 +70,7 @@ output "next_steps" {
 
     2. SSH into the instance:
        ${join("\n       ", [
-  "ssh -i ~/.ssh/${var.ssh_key_name}.pem ubuntu@${aws_eip.main.public_ip}"
+  "ssh -i ~/.ssh/${var.ssh_key_name} ubuntu@${aws_eip.main.public_ip}"
 ])}
 
     3. Check initialization logs:

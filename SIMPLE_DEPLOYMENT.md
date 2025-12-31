@@ -57,6 +57,11 @@ Required values:
 ```bash
 cd terraform
 terraform init
+
+# If GitHub OIDC provider already exists (skip if first time):
+terraform import aws_iam_openid_connect_provider.github \
+  arn:aws:iam::$(aws sts get-caller-identity --query Account --output text --profile personal-terraform):oidc-provider/token.actions.githubusercontent.com
+
 terraform apply
 ```
 
@@ -123,6 +128,15 @@ docker logs gamifying-education-traefik
 cd terraform
 vim security_groups.tf
 terraform apply -target=aws_security_group.main
+```
+
+### GitHub OIDC Provider Already Exists Error:
+```bash
+cd terraform
+terraform import aws_iam_openid_connect_provider.github \
+  arn:aws:iam::$(aws sts get-caller-identity --query Account --output text --profile personal-terraform):oidc-provider/token.actions.githubusercontent.com
+
+terraform apply
 ```
 
 See `TERRAFORM_DEBUGGING.md` for more.
