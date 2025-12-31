@@ -7,7 +7,7 @@ Complete guide to deploy the Gamifying Education application to AWS.
 - AWS account with billing enabled
 - AWS CLI installed and configured (`aws configure`)
 - Terraform installed (version >= 1.0)
-- Domain `devops-assignment.today` already configured in Route 53
+- Domain `yousha.click` already configured in Route 53
 - OpenAI API key
 
 ## Quick Start
@@ -28,7 +28,7 @@ Quick option (AWS Console):
 # List all hosted zones
 aws route53 list-hosted-zones
 
-# Find your zone ID for devops-assignment.today
+# Find your zone ID for yousha.click
 # It looks like: Z0123456789ABC
 ```
 
@@ -106,7 +106,7 @@ terraform output
 
 # The output will show:
 # - instance_public_ip: Your server's IP address
-# - application_url: https://devops-assignment.today
+# - application_url: https://yousha.click
 # - ssh_command: Command to connect via SSH
 ```
 
@@ -123,7 +123,7 @@ sudo tail -f /var/log/cloud-init-output.log
 
 ### 6. Access Your Application
 
-Open in browser: **https://devops-assignment.today**
+Open in browser: **https://yousha.click**
 
 **Default admin credentials**:
 - Email: `admin@example.com` (or what you set in terraform.tfvars)
@@ -262,8 +262,8 @@ terraform apply
 
 1. **Check if DNS is propagated**:
    ```bash
-   dig devops-assignment.today
-   nslookup devops-assignment.today
+   dig yousha.click
+   nslookup yousha.click
    ```
 
 2. **Check security group**:
@@ -471,7 +471,7 @@ terraform import aws_eip.main <ALLOCATION_ID>
 
 3. **Add staging environment** (optional):
    - Duplicate Terraform config for staging
-   - Use different domain: `staging.devops-assignment.today`
+   - Use different domain: `staging.yousha.click`
 
 4. **Improve backup strategy**:
    - Test restore procedure

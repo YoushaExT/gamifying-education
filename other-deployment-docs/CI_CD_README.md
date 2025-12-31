@@ -206,6 +206,6 @@ If you prefer:
 1. Test the pipeline by pushing to main
 2. Monitor first deployment in GitHub Actions
 3. Verify containers are running: `docker ps`
-4. Access your app: https://devops-assignment.today
+4. Access your app: https://yousha.click
 5. Set up staging environment (optional)
 6. Add tests to workflow (optional)

@@ -5,7 +5,7 @@ Quick reference for getting AWS resources needed for deployment.
 ## Prerequisites
 
 - AWS Account
-- Domain registered (you have: `devops-assignment.today`)
+- Domain registered (you have: `yousha.click`)
 - AWS CLI installed locally
 
 ## 1. Get Your AWS Region
@@ -27,12 +27,12 @@ Common regions:
 After terraform creates the hosted zone:
 
 ```bash
-aws route53 list-hosted-zones --query "HostedZones[?Name=='devops-assignment.today.'].Id" --output text
+aws route53 list-hosted-zones --query "HostedZones[?Name=='yousha.click.'].Id" --output text
 ```
 
 Or in AWS Console:
 1. Go to Route 53 → Hosted zones
-2. Click on `devops-assignment.today`
+2. Click on `yousha.click`
 3. Copy the **Hosted zone ID** (looks like `Z1234567890ABC`)
 
 **Important**: Make sure your domain's nameservers point to AWS Route53 nameservers! Get them with:
@@ -88,7 +88,7 @@ Here's where each variable comes from:
 
 | Variable | Source | How to Get |
 |----------|--------|------------|
-| `DOMAIN_NAME` | You provide | `devops-assignment.today` |
+| `DOMAIN_NAME` | You provide | `yousha.click` |
 | `ADMIN_EMAIL` | You provide | `yousha234@gmail.com` |
 | `AWS_REGION` | Your choice | Check `terraform/terraform.tfvars` |
 | `AWS_HOSTED_ZONE_ID` | Terraform output | `terraform output` after applying |
@@ -112,7 +112,7 @@ aws_region = "us-east-1"  # Change to your preferred region
 project_name = "gamifying-education"
 
 # Domain
-domain_name = "devops-assignment.today"
+domain_name = "yousha.click"
 route53_zone_id = "Z1234567890ABC"  # Get from Route53 after creating zone
 
 # SSH Key (for EC2 access)
@@ -196,7 +196,7 @@ sudo tail -f /var/log/cloud-init-output.log
 app-status
 
 # 9. Access your application
-# https://devops-assignment.today
+# https://yousha.click
 ```
 
 ## 9. GitHub Actions Setup (CI/CD)
@@ -228,7 +228,7 @@ After deployment, verify:
 
 - [ ] Domain nameservers updated at registrar
   ```bash
-  dig devops-assignment.today NS
+  dig yousha.click NS
   ```
 
 - [ ] Route53 hosted zone exists
@@ -258,7 +258,7 @@ After deployment, verify:
 
 - [ ] Application accessible
   ```bash
-  curl -I https://devops-assignment.today
+  curl -I https://yousha.click
   ```
 
 ## Troubleshooting

@@ -7,39 +7,39 @@ Complete this checklist step-by-step. Check off each item as you complete it.
 ## Phase 1: Pre-Deployment Setup
 
 ### 1.1 AWS Account Setup
-- [ ] AWS account created and accessible
-- [ ] AWS CLI installed on local machine
+- [x] AWS account created and accessible
+- [x] AWS CLI installed on local machine
   ```bash
   aws --version
   # If not installed: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
   ```
 
 ### 1.2 AWS IAM User for Terraform
-- [ ] Create IAM user for terraform (or use existing)
+- [x] Create IAM user for terraform (or use existing)
   - Go to: AWS Console → IAM → Users → Create user
-  - Username: `terraform-admin` (or similar)
+  - Username: `tf_yousha` (or similar)
   - Attach policy: `AdministratorAccess` (or specific: EC2, RDS, Route53, S3, IAM, ECR)
 
-- [ ] Create access keys for the IAM user
+- [x] Create access keys for the IAM user
   - Click user → Security credentials → Create access key
   - Choose: "Command Line Interface (CLI)"
   - **SAVE THESE SECURELY** (can't view secret again!)
 
-- [ ] Configure AWS CLI with credentials
+- [x] Configure AWS CLI with credentials
   ```bash
   aws configure
   # Enter: Access Key ID, Secret Access Key, Region (us-east-1), Output (json)
   ```
 
-- [ ] Verify AWS CLI works
+- [x] Verify AWS CLI works
   ```bash
   aws sts get-caller-identity
   # Should show your user ARN and account ID
   ```
 
 ### 1.3 Domain Setup
-- [ ] Domain registered: `devops-assignment.today` ✓ (you have this)
-- [ ] Access to domain registrar (Namecheap, GoDaddy, etc.)
+- [x] Domain registered: `yousha.click` ✓ (you have this)
+- [x] Access to domain registrar (Namecheap, GoDaddy, etc.)
 - [ ] Note: You'll update nameservers later after terraform creates Route53 zone
 
 ### 1.4 Generate SSH Key for EC2
@@ -102,7 +102,7 @@ Complete this checklist step-by-step. Check off each item as you complete it.
 - [ ] Fill in all required variables:
   - [ ] `aws_region` = "us-east-1" (or your preferred region)
   - [ ] `project_name` = "gamifying-education"
-  - [ ] `domain_name` = "devops-assignment.today"
+  - [ ] `domain_name` = "yousha.click"
   - [ ] `ssh_key_name` = "gamifying-education-key"
   - [ ] `db_password` = "YOUR_SECURE_DB_PASSWORD"
   - [ ] `first_superuser_email` = "yousha234@gmail.com"
@@ -206,7 +206,7 @@ Complete this checklist step-by-step. Check off each item as you complete it.
 
 - [ ] Verify nameservers updated
   ```bash
-  dig devops-assignment.today NS +short
+  dig yousha.click NS +short
   # Should show AWS nameservers after propagation
   ```
 
@@ -329,7 +329,7 @@ Complete this checklist step-by-step. Check off each item as you complete it.
 
 - [ ] From local machine, test HTTPS
   ```bash
-  curl -I https://devops-assignment.today
+  curl -I https://yousha.click
   # Should return: HTTP/2 200 (if DNS propagated)
   ```
 
@@ -343,7 +343,7 @@ Complete this checklist step-by-step. Check off each item as you complete it.
   ```
 
 ### 5.2 Access Application
-- [ ] Open browser and visit: https://devops-assignment.today
+- [ ] Open browser and visit: https://yousha.click
 
 - [ ] Verify frontend loads
 
@@ -351,11 +351,11 @@ Complete this checklist step-by-step. Check off each item as you complete it.
 
 ### 5.3 Test Backend API
 - [ ] Access API docs
-  - https://devops-assignment.today/docs
+  - https://yousha.click/docs
 
 - [ ] Test health endpoint
   ```bash
-  curl https://devops-assignment.today/api/v1/health
+  curl https://yousha.click/api/v1/health
   # Should return: {"status":"healthy"}
   ```
 
@@ -497,7 +497,7 @@ Complete this checklist step-by-step. Check off each item as you complete it.
   sudo docker compose -f docker-compose.prod.yml restart traefik
   ```
 
-- [ ] Test dashboard access: https://devops-assignment.today/dashboard/
+- [ ] Test dashboard access: https://yousha.click/dashboard/
 
 ### 7.3 Configure Monitoring (Recommended)
 - [ ] Set up CloudWatch alarms
@@ -562,7 +562,7 @@ Complete this checklist step-by-step. Check off each item as you complete it.
 - [ ] Test page load times
 - [ ] Test API response times
   ```bash
-  curl -w "@-" -o /dev/null -s https://devops-assignment.today/api/v1/health <<'EOF'
+  curl -w "@-" -o /dev/null -s https://yousha.click/api/v1/health <<'EOF'
      time_total: %{time_total}s\n
   EOF
   # Should be < 0.5s
@@ -573,15 +573,15 @@ Complete this checklist step-by-step. Check off each item as you complete it.
 ### 9.3 SSL/TLS Verification
 - [ ] Test SSL certificate
   ```bash
-  echo | openssl s_client -servername devops-assignment.today \
-    -connect devops-assignment.today:443 2>/dev/null | \
+  echo | openssl s_client -servername yousha.click \
+    -connect yousha.click:443 2>/dev/null | \
     openssl x509 -noout -dates
   ```
 
 - [ ] Verify certificate is from Let's Encrypt
 
 - [ ] Check SSL Labs rating (optional)
-  - https://www.ssllabs.com/ssltest/analyze.html?d=devops-assignment.today
+  - https://www.ssllabs.com/ssltest/analyze.html?d=yousha.click
 
 ### 9.4 Backup & Recovery Test
 - [ ] Create a test backup
@@ -632,7 +632,7 @@ Complete this checklist step-by-step. Check off each item as you complete it.
 If something goes wrong, check these:
 
 ### Application not accessible
-- [ ] DNS propagated? `dig devops-assignment.today +short`
+- [ ] DNS propagated? `dig yousha.click +short`
 - [ ] Services running? `docker ps` on EC2
 - [ ] Traefik logs: `docker logs gamifying-education-traefik`
 - [ ] Security groups allow 80/443
@@ -717,7 +717,7 @@ aws s3 ls s3://BACKUP_BUCKET/backups/
 
 **Deployed By**: __________
 
-**Application URL**: https://devops-assignment.today
+**Application URL**: https://yousha.click
 
 **Notes**:
 _________________________________________

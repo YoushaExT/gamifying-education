@@ -5,7 +5,7 @@
 Complete, **fully automated** Terraform deployment for your Gamifying Education app on AWS.
 
 **Configuration**:
-- Domain: `devops-assignment.today`
+- Domain: `yousha.click`
 - Region: `us-east-1`
 - Architecture: Single EC2 instance (t4g.micro) with everything
 - SSL: Automatic Let's Encrypt with Route 53 DNS challenge
@@ -121,7 +121,7 @@ chmod 400 ~/.ssh/gamifying-education-key.pem
 
 ### 3. Get Route 53 Zone ID
 ```bash
-aws route53 list-hosted-zones | grep -A 2 "devops-assignment.today"
+aws route53 list-hosted-zones | grep -A 2 "yousha.click"
 # Copy the ID (looks like: Z0123456789ABC)
 ```
 
@@ -193,7 +193,7 @@ sudo tail -f /var/log/cloud-init-output.log
 ```
 
 ### Access Application
-Open browser: **https://devops-assignment.today**
+Open browser: **https://yousha.click**
 
 Login:
 - Email: `admin@example.com`
@@ -220,7 +220,7 @@ sudo tail -f /var/log/nginx/access.log
 sudo certbot certificates
 
 # Test HTTPS
-curl -I https://devops-assignment.today
+curl -I https://yousha.click
 ```
 
 ## Troubleshooting
@@ -338,7 +338,7 @@ terraform destroy  # Type 'yes' to confirm
 ```
 Internet
     ↓
-Route 53 (devops-assignment.today)
+Route 53 (yousha.click)
     ↓
 Elastic IP (Static)
     ↓

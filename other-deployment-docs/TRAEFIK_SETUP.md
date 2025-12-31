@@ -35,7 +35,7 @@ Internet → Traefik (443/80) → Backend (8000) or Frontend (80)
 ### 3. Route53 DNS Challenge Flow
 1. Traefik requests a certificate from Let's Encrypt
 2. Let's Encrypt asks Traefik to prove domain ownership
-3. Traefik creates a TXT record in Route53: `_acme-challenge.devops-assignment.today`
+3. Traefik creates a TXT record in Route53: `_acme-challenge.yousha.click`
 4. Let's Encrypt verifies the TXT record exists
 5. Certificate issued and stored
 6. Traefik automatically cleans up the TXT record
@@ -51,7 +51,7 @@ The EC2 instance has an IAM role with:
 See `terraform/iam.tf` for details.
 
 ### Route53 Hosted Zone
-- Domain: `devops-assignment.today`
+- Domain: `yousha.click`
 - Managed in: `terraform/vpc.tf`
 - Hosted Zone ID is passed to Traefik via environment variable
 
@@ -69,14 +69,14 @@ Defines the Traefik service with:
 **Backend (FastAPI):**
 ```yaml
 labels:
-  - "traefik.http.routers.backend.rule=Host(`devops-assignment.today`) && PathPrefix(`/api/v1`, `/docs`, `/redoc`, `/openapi.json`)"
+  - "traefik.http.routers.backend.rule=Host(`yousha.click`) && PathPrefix(`/api/v1`, `/docs`, `/redoc`, `/openapi.json`)"
   - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
 ```
 
 **Frontend (React/nginx):**
 ```yaml
 labels:
-  - "traefik.http.routers.frontend.rule=Host(`devops-assignment.today`)"
+  - "traefik.http.routers.frontend.rule=Host(`yousha.click`)"
   - "traefik.http.routers.frontend.priority=1"  # Lower priority = catch-all
   - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
 ```
@@ -86,7 +86,7 @@ labels:
 These are set by `terraform/user_data.sh` during instance initialization:
 
 ```bash
-DOMAIN_NAME=devops-assignment.today        # Your domain
+DOMAIN_NAME=yousha.click        # Your domain
 ADMIN_EMAIL=yousha234@gmail.com            # For Let's Encrypt notifications
 AWS_REGION=us-east-1                       # Your AWS region
 AWS_HOSTED_ZONE_ID=Z1234567890ABC          # Route53 hosted zone ID
@@ -141,13 +141,13 @@ docker logs gamifying-education-traefik | grep -i certificate
 
 ### Access Traefik dashboard:
 ```
-https://devops-assignment.today/dashboard/
+https://yousha.click/dashboard/
 ```
 (Note: Requires basic auth if uncommented in docker-compose.prod.yml)
 
 ### Verify HTTPS:
 ```bash
-curl -I https://devops-assignment.today
+curl -I https://yousha.click
 # Should return: HTTP/2 200
 ```
 
@@ -176,7 +176,7 @@ aws route53 list-resource-record-sets \
 
 3. Verify domain nameservers:
    ```bash
-   dig devops-assignment.today NS
+   dig yousha.click NS
    # Should return AWS Route53 nameservers
    ```
 
@@ -186,7 +186,7 @@ aws route53 list-resource-record-sets \
    ```
 
 ### Issue: HTTP works but HTTPS doesn't
-**Symptoms**: Site accessible on http://devops-assignment.today but not https://
+**Symptoms**: Site accessible on http://yousha.click but not https://
 
 **Solutions:**
 1. Check security group allows port 443
@@ -279,14 +279,14 @@ Internet → Traefik (HTTPS) → Frontend Container (Nginx) → React static fil
 docker inspect $(docker ps -q) | jq -r '.[] | .Config.Labels'
 
 # Test backend routing
-curl -k https://devops-assignment.today/api/v1/health
+curl -k https://yousha.click/api/v1/health
 
 # Test frontend routing
-curl -k https://devops-assignment.today/
+curl -k https://yousha.click/
 
 # Check certificate expiry
-echo | openssl s_client -servername devops-assignment.today \
-  -connect devops-assignment.today:443 2>/dev/null | \
+echo | openssl s_client -servername yousha.click \
+  -connect yousha.click:443 2>/dev/null | \
   openssl x509 -noout -dates
 
 # Force certificate renewal (for testing)

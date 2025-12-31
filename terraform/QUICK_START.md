@@ -8,7 +8,7 @@ Deploy your application to AWS in 5 steps (15 minutes).
 - [ ] AWS CLI installed: `aws --version`
 - [ ] AWS credentials configured: `aws configure`
 - [ ] Terraform installed: `terraform --version`
-- [ ] Domain `devops-assignment.today` in Route 53
+- [ ] Domain `yousha.click` in Route 53
 - [ ] OpenAI API key
 
 ## Step-by-Step Deployment
@@ -44,7 +44,7 @@ chmod 400 ~/.ssh/gamifying-education-key.pem
 
 ```bash
 # Find your hosted zone ID
-aws route53 list-hosted-zones | grep -A 2 "devops-assignment.today"
+aws route53 list-hosted-zones | grep -A 2 "yousha.click"
 
 # Copy the ID (looks like: Z0123456789ABC)
 ```
@@ -144,7 +144,7 @@ sudo tail -f /var/log/cloud-init-output.log
 
 ### Test Application
 
-1. Open browser: **https://devops-assignment.today**
+1. Open browser: **https://yousha.click**
 2. Login with:
    - Email: `admin@example.com`
    - Password: `first_superuser_password` from terraform.tfvars
@@ -182,7 +182,7 @@ ssh -i ~/.ssh/gamifying-education-key.pem ubuntu@$(terraform output -raw instanc
 ### "Website not loading"
 ```bash
 # Check if DNS is ready (may take 1-2 minutes)
-dig devops-assignment.today
+dig yousha.click
 
 # Check SSL certificate status
 ssh -i ~/.ssh/gamifying-education-key.pem ubuntu@$(terraform output -raw instance_public_ip)
@@ -198,7 +198,7 @@ ssh -i ~/.ssh/gamifying-education-key.pem ubuntu@$(terraform output -raw instanc
 sudo tail -100 /var/log/cloud-init-output.log | grep -A 10 "Setting up SSL"
 
 # Manually retry SSL setup
-sudo certbot --nginx -d devops-assignment.today -d www.devops-assignment.today --non-interactive --agree-tos --email your-email@example.com
+sudo certbot --nginx -d yousha.click -d www.yousha.click --non-interactive --agree-tos --email your-email@example.com
 ```
 
 ## Private Repository Setup (Optional)

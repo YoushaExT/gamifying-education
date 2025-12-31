@@ -50,7 +50,7 @@ Traefik (Docker container)
 Traefik (Docker container)
 ├── Automatic HTTPS (Let's Encrypt)
 ├── Dynamic routing via Docker labels
-├── Single domain (devops-assignment.today)
+├── Single domain (yousha.click)
 └── Dashboard UI (optional)
 ```
 
@@ -145,7 +145,7 @@ Traefik (traefik-public network)
 **Current**:
 ```
 Single Production
-└── devops-assignment.today
+└── yousha.click
     ├── Frontend served by Nginx
     └── Backend proxied to FastAPI
 ```

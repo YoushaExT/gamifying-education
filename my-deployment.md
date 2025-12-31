@@ -7,7 +7,7 @@ This deployment plan prioritizes **minimal cost** while maintaining functionalit
 **Fully automated deployment** - just run `terraform apply` and everything is configured automatically!
 
 **Your Configuration**:
-- Domain: `devops-assignment.today` (already in Route 53)
+- Domain: `yousha.click` (already in Route 53)
 - Region: `us-east-1`
 - SSL: Automatic with Let's Encrypt + Route 53 DNS challenge
 - No manual steps required
@@ -43,7 +43,7 @@ This deployment plan prioritizes **minimal cost** while maintaining functionalit
 ```
 ┌─────────────────────────────────────────────────┐
 │  Route 53                                       │
-│  devops-assignment.today → Elastic IP           │
+│  yousha.click → Elastic IP           │
 └─────────────────────────────────────────────────┘
                       ↓
 ┌─────────────────────────────────────────────────┐
@@ -404,7 +404,7 @@ If deployment fails:
 
 ## Your Configuration Answers ✅
 
-1. **Domain name**: `devops-assignment.today` (existing in Route 53 - not managed by Terraform)
+1. **Domain name**: `yousha.click` (existing in Route 53 - not managed by Terraform)
 2. **Region**: `us-east-1`
 3. **SSH key**: Create new AWS key pair (see SSH_KEY_SETUP.md)
 4. **OpenAI API key**: ✅ Have it (add to terraform.tfvars)
@@ -426,7 +426,7 @@ The user_data script automatically:
 - ✅ Starts all services
 - ✅ Configures automated backups
 
-Wait 8-12 minutes, then access: **https://devops-assignment.today**
+Wait 8-12 minutes, then access: **https://yousha.click**
 
 ## Alternative SSL Options (Not Recommended for Single EC2)
 

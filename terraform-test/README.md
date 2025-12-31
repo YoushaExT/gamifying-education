@@ -249,7 +249,7 @@ terraform destroy
 | SSL | No | Yes (Let's Encrypt) |
 | Database | No | PostgreSQL |
 | Backups | No | S3 automated |
-| Domain | IP only | devops-assignment.today |
+| Domain | IP only | yousha.click |
 | Cost | FREE | ~$5-8/month |
 
 ## Cost

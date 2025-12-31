@@ -222,7 +222,7 @@ docker logs gamifying-education-backend
 docker logs gamifying-education-frontend
 
 # Test application
-curl https://devops-assignment.today
+curl https://yousha.click
 ```
 
 ## Workflow Breakdown

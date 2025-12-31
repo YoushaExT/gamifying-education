@@ -50,12 +50,12 @@ cd terraform/
 # Follow QUICK_START.md
 terraform init
 terraform apply
-# Access: https://devops-assignment.today
+# Access: https://yousha.click
 ```
 
 ## 🎯 Your Configuration
 
-**Domain**: `devops-assignment.today` (Route 53)
+**Domain**: `yousha.click` (Route 53)
 - ✅ NOT managed by Terraform (safe from accidental deletion)
 - ✅ DNS records WILL be created/updated by Terraform
 
@@ -109,7 +109,7 @@ terraform destroy
 ### Step 2: Get Route 53 Zone ID (1 minute)
 
 ```bash
-aws route53 list-hosted-zones | grep -A 2 "devops-assignment.today"
+aws route53 list-hosted-zones | grep -A 2 "yousha.click"
 # Copy the zone ID (looks like: Z0123456789ABC)
 ```
 
@@ -154,7 +154,7 @@ terraform plan
 terraform apply
 
 # 3. Wait 10-12 minutes for automatic setup
-# 4. Access: https://devops-assignment.today
+# 4. Access: https://yousha.click
 ```
 
 ## 🚀 What Happens Automatically
@@ -184,7 +184,7 @@ When you run `terraform apply` on the main deployment:
    - Sets up supplemental S3 backups (daily at 2 AM)
 
 3. **Result** ✨
-   - Application live at: https://devops-assignment.today
+   - Application live at: https://yousha.click
    - All services running
    - HTTPS working
    - RDS automated backups active (7 days retention)
@@ -388,10 +388,10 @@ terraform destroy  # Type 'yes'
 - [ ] terraform.tfvars configured
 
 ### After Deployment
-- [ ] Application accessible at https://devops-assignment.today
+- [ ] Application accessible at https://yousha.click
 - [ ] Can login with admin credentials
 - [ ] SSL certificate valid (check browser padlock)
-- [ ] Backend API responding: `curl https://devops-assignment.today/api/v1/health`
+- [ ] Backend API responding: `curl https://yousha.click/api/v1/health`
 - [ ] Database working (create test question)
 - [ ] Backups running (check S3 bucket)
 
@@ -453,7 +453,7 @@ cd terraform/
 
 When you see:
 - ✅ `terraform apply` completes
-- ✅ Browser shows your app at https://devops-assignment.today
+- ✅ Browser shows your app at https://yousha.click
 - ✅ Green padlock (HTTPS working)
 - ✅ Can login with admin credentials
 
