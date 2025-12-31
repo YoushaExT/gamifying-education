@@ -2,6 +2,8 @@
 
 **IMPORTANT**: The Route53 hosted zone is **NOT** managed by terraform to avoid accidental deletion and unnecessary costs during testing.
 
+**NOTE**: Since `yousha.click` was purchased from AWS Route53, the hosted zone and nameservers are **already configured**. You only need to get the zone ID.
+
 ---
 
 ## Understanding Route53 Costs
@@ -43,9 +45,14 @@ resource "aws_route53_zone" "main" {
 
 ## Setup Instructions
 
-### Step 1: Create Hosted Zone (One-Time Setup)
+### ~~Step 1: Create Hosted Zone~~ (Already Done - Domain from AWS)
 
-#### Option A: AWS Console (Easiest)
+**Since the domain was bought from AWS, the hosted zone already exists!** Skip to Step 2.
+
+<details>
+<summary>Only if domain was NOT from AWS (click to expand)</summary>
+
+#### Option A: AWS Console
 
 1. Go to AWS Console → Route 53
 2. Click "Create hosted zone"
@@ -53,16 +60,18 @@ resource "aws_route53_zone" "main" {
 4. Type: Public hosted zone
 5. Click "Create hosted zone"
 
-**Cost**: $0.50/month starts here
-
 #### Option B: AWS CLI
 
 ```bash
 aws route53 create-hosted-zone \
   --name yousha.click \
   --caller-reference $(date +%s) \
-  --hosted-zone-config Comment="Gamifying Education Production"
+  --hosted-zone-config Comment="Gamifying Education Production" \
+  --profile personal-terraform
 ```
+</details>
+
+**Cost**: $0.50/month (already being charged since domain purchased from AWS)
 
 ### Step 2: Get Hosted Zone ID
 
@@ -77,21 +86,49 @@ aws route53 create-hosted-zone \
 ```bash
 aws route53 list-hosted-zones \
   --query "HostedZones[?Name=='yousha.click.'].Id" \
-  --output text
+  --output text \
+  --profile personal-terraform
 ```
 
 Example output: `/hostedzone/Z1234567890ABC`
 
 **Use only the ID part**: `Z1234567890ABC`
 
-### Step 3: Update Domain Nameservers (One-Time Setup)
+### ~~Step 3: Update Domain Nameservers~~ (Already Done - Domain from AWS)
+
+**Since the domain was bought from AWS, nameservers are automatically configured!** Skip this step.
+
+<details>
+<summary>Verify nameservers are set (optional check)</summary>
+
+Check current nameservers:
+
+```bash
+dig yousha.click NS +short
+```
+
+Should show AWS nameservers like:
+```
+ns-1234.awsdns-12.org.
+ns-5678.awsdns-34.co.uk.
+ns-9012.awsdns-56.com.
+ns-3456.awsdns-78.net.
+```
+
+If they match, you're good! ✓
+
+</details>
+
+<details>
+<summary>Only if domain was NOT from AWS (click to expand)</summary>
 
 Get the nameservers:
 
 ```bash
 aws route53 get-hosted-zone \
   --id Z1234567890ABC \
-  --query "DelegationSet.NameServers"
+  --query "DelegationSet.NameServers" \
+  --profile personal-terraform
 ```
 
 Example output:
@@ -117,6 +154,8 @@ Verify:
 dig yousha.click NS +short
 # Should show AWS nameservers
 ```
+
+</details>
 
 ### Step 4: Add to terraform.tfvars
 

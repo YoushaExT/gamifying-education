@@ -2,6 +2,8 @@
 
 This document explains the Traefik configuration for automatic HTTPS with Let's Encrypt.
 
+**NOTE**: Since `yousha.click` was purchased from AWS Route53, the hosted zone and nameservers are **already configured** - no manual DNS setup needed!
+
 ## Overview
 
 We use Traefik v3.2 as a reverse proxy and load balancer that:
@@ -155,7 +157,8 @@ curl -I https://yousha.click
 ```bash
 aws route53 list-resource-record-sets \
   --hosted-zone-id $AWS_HOSTED_ZONE_ID \
-  --query "ResourceRecordSets[?contains(Name, '_acme-challenge')]"
+  --query "ResourceRecordSets[?contains(Name, '_acme-challenge')]" \
+  --profile personal-terraform
 ```
 
 ## Common Issues
@@ -174,10 +177,10 @@ aws route53 list-resource-record-sets \
    aws sts get-caller-identity  # Verify instance role
    ```
 
-3. Verify domain nameservers:
+3. Verify domain nameservers (already configured since domain from AWS):
    ```bash
-   dig yousha.click NS
-   # Should return AWS Route53 nameservers
+   dig yousha.click NS +short
+   # Should show AWS Route53 nameservers (already done automatically)
    ```
 
 4. Check Traefik logs for detailed error:

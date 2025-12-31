@@ -117,10 +117,10 @@ terraform destroy
 
 ```bash
 # 1. Check instance status
-aws ec2 describe-instance-status --instance-ids $(terraform output -raw instance_id)
+aws ec2 describe-instance-status --instance-ids $(terraform output -raw instance_id) --profile personal-terraform
 
 # 2. View system logs (console output)
-aws ec2 get-console-output --instance-id $(terraform output -raw instance_id) --output text
+aws ec2 get-console-output --instance-id $(terraform output -raw instance_id) --output text --profile personal-terraform
 
 # 3. SSH into instance
 ssh -i ~/.ssh/gamifying-education-key.pem ubuntu@$(terraform output -raw instance_public_ip)
@@ -179,7 +179,7 @@ ssh -i ~/.ssh/gamifying-education-key.pem ubuntu@$(terraform output -raw instanc
 
 ```bash
 # 1. Check RDS is running
-aws rds describe-db-instances --query "DBInstances[0].{Status:DBInstanceStatus,Endpoint:Endpoint.Address}"
+aws rds describe-db-instances --query "DBInstances[0].{Status:DBInstanceStatus,Endpoint:Endpoint.Address}" --profile personal-terraform
 
 # 2. Test connection from EC2
 ssh -i ~/.ssh/gamifying-education-key.pem ubuntu@INSTANCE_IP
@@ -210,7 +210,7 @@ terraform apply -target=aws_security_group.rds -target=aws_security_group.backen
 
 ```bash
 # View current RDS config
-aws rds describe-db-instances --db-instance-identifier $(terraform state show aws_db_instance.main | grep "id " | awk '{print $3}' | tr -d '"')
+aws rds describe-db-instances --db-instance-identifier $(terraform state show aws_db_instance.main | grep "id " | awk '{print $3}' | tr -d '"') --profile personal-terraform
 
 # Check parameter group
 terraform state show aws_db_parameter_group.main
@@ -241,10 +241,10 @@ terraform apply -target=aws_db_instance.main
 curl -4 ifconfig.me
 
 # 2. Check security group rules
-aws ec2 describe-security-groups --group-ids $(terraform output -raw security_group_id)
+aws ec2 describe-security-groups --group-ids $(terraform output -raw security_group_id) --profile personal-terraform
 
 # 3. Check instance security group associations
-aws ec2 describe-instances --instance-ids $(terraform output -raw instance_id) --query "Reservations[0].Instances[0].SecurityGroups"
+aws ec2 describe-instances --instance-ids $(terraform output -raw instance_id) --query "Reservations[0].Instances[0].SecurityGroups" --profile personal-terraform
 ```
 
 **Fix: Update security group rules**
@@ -267,14 +267,14 @@ ssh -i ~/.ssh/gamifying-education-key.pem ubuntu@INSTANCE_IP
 **Debug:**
 
 ```bash
-# 1. Check nameservers
+# 1. Check nameservers (should already be AWS since domain bought from AWS)
 dig yousha.click NS +short
 
 # 2. Check A record exists
 dig yousha.click A +short
 
 # 3. Check Route53 hosted zone
-aws route53 list-resource-record-sets --hosted-zone-id YOUR_ZONE_ID
+aws route53 list-resource-record-sets --hosted-zone-id YOUR_ZONE_ID --profile personal-terraform
 
 # 4. Verify zone ID matches
 terraform state show data.aws_route53_zone.main
@@ -299,10 +299,10 @@ terraform apply -target=aws_route53_record.main
 
 ```bash
 # 1. Check ECR repositories exist
-aws ecr describe-repositories
+aws ecr describe-repositories --profile personal-terraform
 
 # 2. Test authentication
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $(terraform output -raw ecr_registry)
+aws ecr get-login-password --region us-east-1 --profile personal-terraform | docker login --username AWS --password-stdin $(terraform output -raw ecr_registry)
 
 # 3. Check IAM permissions
 terraform state show aws_iam_role_policy.ecr_policy
@@ -506,7 +506,7 @@ terraform apply -target=aws_instance.main
 
 ```bash
 # 1. Check instance is running
-aws ec2 describe-instances --instance-ids $(terraform output -raw instance_id)
+aws ec2 describe-instances --instance-ids $(terraform output -raw instance_id) --profile personal-terraform
 
 # 2. Revert security group changes
 git log terraform/security_groups.tf  # Find last working commit
@@ -521,7 +521,7 @@ terraform apply -replace=aws_instance.main
 
 ```bash
 # 1. Check RDS is running
-aws rds describe-db-instances
+aws rds describe-db-instances --profile personal-terraform
 
 # 2. Check security groups allow connection
 terraform state show aws_security_group.rds
@@ -555,9 +555,9 @@ terraform show
 terraform plan
 
 # 5. Check actual AWS resources
-aws ec2 describe-instances
-aws rds describe-db-instances
-aws ecr describe-repositories
+aws ec2 describe-instances --profile personal-terraform
+aws rds describe-db-instances --profile personal-terraform
+aws ecr describe-repositories --profile personal-terraform
 
 # 6. SSH into EC2 and check logs
 ssh -i ~/.ssh/KEY.pem ubuntu@IP

@@ -2,10 +2,12 @@
 
 Quick reference for getting AWS resources needed for deployment.
 
+**NOTE**: Since `yousha.click` was purchased from AWS, the Route53 hosted zone and nameservers are **already configured**!
+
 ## Prerequisites
 
 - AWS Account
-- Domain registered (you have: `yousha.click`)
+- Domain registered (you have: `yousha.click`) - **Bought from AWS** ✓
 - AWS CLI installed locally
 
 ## 1. Get Your AWS Region
@@ -24,10 +26,12 @@ Common regions:
 
 ## 2. Get Your Route53 Hosted Zone ID
 
-After terraform creates the hosted zone:
+**Since domain was bought from AWS, the hosted zone already exists!**
+
+Get the zone ID:
 
 ```bash
-aws route53 list-hosted-zones --query "HostedZones[?Name=='yousha.click.'].Id" --output text
+aws route53 list-hosted-zones --query "HostedZones[?Name=='yousha.click.'].Id" --output text --profile personal-terraform
 ```
 
 Or in AWS Console:
@@ -35,12 +39,18 @@ Or in AWS Console:
 2. Click on `yousha.click`
 3. Copy the **Hosted zone ID** (looks like `Z1234567890ABC`)
 
-**Important**: Make sure your domain's nameservers point to AWS Route53 nameservers! Get them with:
+**Nameservers**: Already configured automatically by AWS since domain was purchased through Route53! ✓
+
+<details>
+<summary>Verify nameservers (optional)</summary>
+
 ```bash
-aws route53 get-hosted-zone --id YOUR_HOSTED_ZONE_ID --query "DelegationSet.NameServers"
+dig yousha.click NS +short
+# Should show AWS nameservers like ns-####.awsdns-##.org
 ```
 
-Then update your domain registrar (Namecheap, GoDaddy, etc.) with these nameservers.
+If you see AWS nameservers, you're good!
+</details>
 
 ## 3. Get ECR Repository URLs
 
@@ -226,14 +236,15 @@ GitHub Actions will use OIDC to assume the role (no long-lived credentials neede
 
 After deployment, verify:
 
-- [ ] Domain nameservers updated at registrar
+- [ ] Domain nameservers point to AWS (already done since domain from AWS) ✓
   ```bash
-  dig yousha.click NS
+  dig yousha.click NS +short
+  # Should show AWS nameservers
   ```
 
-- [ ] Route53 hosted zone exists
+- [ ] Route53 hosted zone exists (already exists since domain from AWS) ✓
   ```bash
-  aws route53 list-hosted-zones
+  aws route53 list-hosted-zones | grep yousha.click
   ```
 
 - [ ] ECR repositories created
