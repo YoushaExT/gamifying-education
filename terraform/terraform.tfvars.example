@@ -5,20 +5,20 @@ aws_region     = "us-east-1"
 aws_profile    = "personal-terraform"  # Your AWS CLI profile name
 project_name   = "gamifying-education"
 domain_name    = "yousha.click"
-route53_zone_id = "Z0123456789ABC" # Find this in Route 53 console
+route53_zone_id = "Z04364101ZY2RPKY7DZ31" # Find this in Route 53 console
 
 # SSH Configuration
-ssh_key_name       = "my-ec2-key"           # Name of your AWS key pair
-allowed_ssh_cidr   = "YOUR_IP_ADDRESS/32"   # Change to your IP! (e.g., "203.0.113.5/32")
+ssh_key_name       = "gamifying-education-key"           # Name of your AWS key pair
+allowed_ssh_cidr   = "0.0.0.0/0"   # Change to your IP! (e.g., "203.0.113.5/32")
 
 # Instance Configuration
 instance_type = "t4g.micro" # ARM64, Free Tier eligible
 
 # RDS Configuration
 # Option A (Recommended): Use db.t3.micro for first year (Free Tier), then switch to db.t4g.micro
-db_instance_class = "db.t3.micro"  # x86, FREE first year (750 hrs/month), then $15/month
+# db_instance_class = "db.t3.micro"  # x86, FREE first year (750 hrs/month), then $15/month
 # Option B: Use db.t4g.micro from the start (~$12/month, no Free Tier but cheaper long-term)
-# db_instance_class = "db.t4g.micro"  # ARM64, $12/month
+db_instance_class = "db.t4g.micro"  # ARM64, $12/month
 db_allocated_storage     = 20    # GB, Free Tier includes 20GB
 db_multi_az              = false # Set true for HA (doubles cost)
 db_deletion_protection   = false # Set true for production
@@ -29,14 +29,14 @@ db_password = "GENERATE_SECURE_PASSWORD_HERE" # Use: openssl rand -base64 32
 
 # Application Secrets
 django_secret_key = "GENERATE_SECRET_KEY_HERE" # Use: openssl rand -base64 32
-first_superuser_email    = "admin@example.com"
+first_superuser_email    = "yousha234@gmail.com"
 first_superuser_password = "GENERATE_SECURE_PASSWORD_HERE" # Use: openssl rand -base64 32
 
 # OpenAI Configuration
 openai_api_key = "sk-proj-..." # Your OpenAI API key
 
 # SSL Configuration
-admin_email = "your-email@example.com" # For Let's Encrypt notifications
+admin_email = "yousha234@gmail.com" # For Let's Encrypt notifications
 
 # GitHub Configuration (for CI/CD with OIDC)
-github_repo = "yourusername/gamifying-education"  # Your GitHub repo in format "owner/repo"
+github_repo = "YoushaExT/gamifying-education"  # Your GitHub repo in format "owner/repo"
