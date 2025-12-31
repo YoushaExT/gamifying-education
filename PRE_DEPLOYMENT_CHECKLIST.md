@@ -7,42 +7,42 @@ Test everything locally before deploying to AWS. Catch issues early!
 ## 1. Development Environment Setup
 
 ### 1.1 Required Tools
-- [ ] Node.js 24 installed
+- [x] Node.js 24 installed
   ```bash
   nvm use  # Should use Node 24 from .nvmrc
   node --version  # Should show v24.x.x
   ```
 
-- [ ] Python 3.10+ and uv installed
+- [x] Python 3.10+ and uv installed
   ```bash
   python3 --version  # Should be 3.10+
   uv --version
   ```
 
-- [ ] Docker installed and running
+- [x] Docker installed and running
   ```bash
   docker --version
   docker ps  # Should not error
   ```
 
-- [ ] Terraform installed
+- [x] Terraform installed
   ```bash
   terraform --version  # Should be >= 1.0
   ```
 
-- [ ] AWS CLI installed
+- [x] AWS CLI installed
   ```bash
   aws --version
   ```
 
 ### 1.2 Git Repository
-- [ ] Repository cloned
+- [x] Repository cloned
   ```bash
   cd ~/IBA/fyp/gamifying-education
   git status  # Should show clean working tree or your changes
   ```
 
-- [ ] On correct branch
+- [x] On correct branch
   ```bash
   git branch  # Should be on dev or your feature branch
   ```
@@ -52,7 +52,7 @@ Test everything locally before deploying to AWS. Catch issues early!
 ## 2. AWS Credentials Setup
 
 ### 2.1 Configure AWS Profile
-- [ ] Configure `personal-terraform` profile
+- [x] Configure `personal-terraform` profile
   ```bash
   aws configure --profile personal-terraform
   # Enter your AWS Access Key ID
@@ -62,13 +62,13 @@ Test everything locally before deploying to AWS. Catch issues early!
   ```
 
 ### 2.2 Verify AWS Access
-- [ ] Test AWS credentials work
+- [x] Test AWS credentials work
   ```bash
   aws sts get-caller-identity --profile personal-terraform
   # Should show your AWS account details
   ```
 
-- [ ] Verify Route53 access
+- [x] Verify Route53 access
   ```bash
   aws route53 list-hosted-zones --profile personal-terraform
   # Should list your hosted zones (yousha.click should be there)
@@ -79,18 +79,18 @@ Test everything locally before deploying to AWS. Catch issues early!
 ## 3. Local Docker Build Tests
 
 ### 3.1 Test Backend Build
-- [ ] Build backend Docker image
+- [x] Build backend Docker image
   ```bash
   cd backend
   docker build -t gamifying-education-backend:test .
   ```
 
-- [ ] Verify image created
+- [x] Verify image created
   ```bash
   docker images | grep gamifying-education-backend
   ```
 
-- [ ] Test run backend container (optional)
+- [x] Test run backend container (optional)
   ```bash
   # Create minimal .env first
   cat > .env.test << EOF
@@ -109,18 +109,18 @@ Test everything locally before deploying to AWS. Catch issues early!
   ```
 
 ### 3.2 Test Frontend Build
-- [ ] Build frontend Docker image
+- [x] Build frontend Docker image
   ```bash
   cd frontend
   docker build -f Dockerfile.prod -t gamifying-education-frontend:test .
   ```
 
-- [ ] Verify image created
+- [x] Verify image created
   ```bash
   docker images | grep gamifying-education-frontend
   ```
 
-- [ ] Test run frontend container (optional)
+- [x] Test run frontend container (optional)
   ```bash
   docker run --rm -p 8080:80 -d --name test-frontend gamifying-education-frontend:test
   # Wait a few seconds
@@ -132,7 +132,7 @@ Test everything locally before deploying to AWS. Catch issues early!
   ```
 
 ### 3.3 Cleanup Test Images
-- [ ] Remove test images
+- [x] Remove test images
   ```bash
   docker rmi gamifying-education-backend:test gamifying-education-frontend:test
   ```
@@ -142,18 +142,18 @@ Test everything locally before deploying to AWS. Catch issues early!
 ## 4. Terraform Test Project
 
 ### 4.1 Setup terraform-test
-- [ ] Navigate to terraform-test
+- [x] Navigate to terraform-test
   ```bash
   cd terraform-test
   ```
 
-- [ ] Create terraform.tfvars
+- [x] Create terraform.tfvars
   ```bash
   cp terraform.tfvars.example terraform.tfvars
   vim terraform.tfvars
   ```
 
-- [ ] Fill in values:
+- [x] Fill in values:
   - `aws_region` = "us-east-1"
   - `aws_profile` = "personal-terraform"
   - `ssh_key_name` = "gamifying-education-key" (or your key name)
@@ -165,7 +165,7 @@ Test everything locally before deploying to AWS. Catch issues early!
   aws ec2 describe-key-pairs --key-names gamifying-education-key --region us-east-1 --profile personal-terraform
   ```
 
-- [ ] If not found, create it:
+- [x] If not found, create it:
   ```bash
   # Option A: Create new key pair
   aws ec2 create-key-pair \
@@ -188,60 +188,60 @@ Test everything locally before deploying to AWS. Catch issues early!
   ```
 
 ### 4.3 Test Terraform Commands
-- [ ] Initialize terraform
+- [x] Initialize terraform
   ```bash
   terraform init
   # Should download AWS provider successfully
   ```
 
-- [ ] Validate configuration
+- [x] Validate configuration
   ```bash
   terraform validate
   # Should return: Success! The configuration is valid.
   ```
 
-- [ ] Format check
+- [x] Format check
   ```bash
   terraform fmt -check
   # Should return nothing (all files formatted)
   ```
 
-- [ ] Plan deployment (dry run)
+- [x] Plan deployment (dry run)
   ```bash
   terraform plan
   # Review the plan - should show resources to create
   ```
 
 ### 4.4 Deploy Test Instance (Optional but Recommended)
-- [ ] Apply terraform to create test instance
+- [x] Apply terraform to create test instance
   ```bash
   terraform apply
   # Type: yes
   ```
 
-- [ ] Wait for completion (~2-3 minutes)
+- [x] Wait for completion (~2-3 minutes)
 
-- [ ] Get instance IP
+- [x] Get instance IP
   ```bash
   terraform output instance_public_ip
   ```
 
-- [ ] Wait for instance to initialize (~1-2 minutes)
+- [x] Wait for instance to initialize (~1-2 minutes)
 
-- [ ] Test SSH connection
+- [x] Test SSH connection
   ```bash
   ssh -i ~/.ssh/gamifying-education-key.pem ubuntu@$(terraform output -raw instance_public_ip)
   # Should connect successfully
   # Type 'exit' to disconnect
   ```
 
-- [ ] Test web server
+- [x] Test web server
   ```bash
   curl http://$(terraform output -raw instance_public_ip)
   # Should return HTML with "Hello from Terraform!"
   ```
 
-- [ ] Open in browser (optional)
+- [x] Open in browser (optional)
   ```bash
   # On Mac:
   open http://$(terraform output -raw instance_public_ip)
@@ -250,13 +250,13 @@ Test everything locally before deploying to AWS. Catch issues early!
   ```
 
 ### 4.5 Cleanup Test Instance
-- [ ] Destroy test resources
+- [x] Destroy test resources
   ```bash
   terraform destroy
   # Type: yes
   ```
 
-- [ ] Verify everything cleaned up
+- [x] Verify everything cleaned up
   ```bash
   terraform show
   # Should show empty state
