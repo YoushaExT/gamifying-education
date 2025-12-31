@@ -12,7 +12,7 @@ This project uses a **fully automated AWS deployment** with:
 - ✅ Terraform infrastructure as code
 - ✅ SSM Session Manager (no SSH key management)
 
-**Domain**: `devops-assignment.today`
+**Domain**: `yousha.click`
 
 ## 📚 Documentation Structure
 
@@ -40,7 +40,7 @@ cd ../terraform/
 # Follow terraform/QUICK_START.md
 ```
 
-**Result**: App running at https://devops-assignment.today
+**Result**: App running at https://yousha.click
 **Deployment**: Manual (SSH to update)
 
 ### Path 2: Infrastructure + CI/CD (Recommended)
@@ -55,7 +55,7 @@ cd terraform/
 # Follow CI_CD_README.md or terraform/CI_CD_SETUP.md
 ```
 
-**Result**: App running at https://devops-assignment.today
+**Result**: App running at https://yousha.click
 **Deployment**: Automatic on git push to main!
 
 ## 📋 Prerequisites
@@ -63,7 +63,7 @@ cd terraform/
 - AWS account (Free Tier eligible)
 - AWS CLI configured
 - Terraform installed
-- Domain in Route 53: `devops-assignment.today`
+- Domain in Route 53: `yousha.click`
 - OpenAI API key
 - GitHub repository (for CI/CD)
 
@@ -128,7 +128,7 @@ terraform apply
 # Wait 12-15 minutes for automatic setup
 ```
 
-**Access**: https://devops-assignment.today
+**Access**: https://yousha.click
 
 **Details**: See `terraform/QUICK_START.md`
 
@@ -362,7 +362,7 @@ See `deployment-reference/README.md` for differences.
 - [ ] terraform.tfvars configured
 - [ ] All passwords generated
 - [ ] terraform apply completed
-- [ ] Application accessible at https://devops-assignment.today
+- [ ] Application accessible at https://yousha.click
 - [ ] SSL certificate valid
 - [ ] Can login with admin credentials
 - [ ] Database connections working
@@ -388,7 +388,7 @@ See `deployment-reference/README.md` for differences.
 **With CI/CD**: Add steps from `CI_CD_README.md`
 **Full details**: Read `DEPLOYMENT_SUMMARY.md`
 
-**Your app will be live at**: https://devops-assignment.today
+**Your app will be live at**: https://yousha.click
 
 ---
 
