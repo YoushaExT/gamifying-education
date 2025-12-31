@@ -8,9 +8,9 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  PROJECT_NAME: gamifying-education
   ECR_REPOSITORY_BACKEND: gamifying-education-backend
   ECR_REPOSITORY_FRONTEND: gamifying-education-frontend
-  EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
 
 jobs:
   build-and-deploy:
@@ -24,17 +24,50 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Discover AWS Role ARN dynamically
+      - name: Get AWS Account ID
+        id: get-account
+        run: |
+          # GitHub repo format: owner/repo
+          GITHUB_REPO="${{ github.repository }}"
+          echo "GITHUB_REPO=$GITHUB_REPO" >> $GITHUB_ENV
+
+          # Construct role ARN (will be validated when assuming)
+          AWS_ACCOUNT_ID="214543393762"  # Your AWS account
+          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${PROJECT_NAME}-github-actions-role"
+          echo "ROLE_ARN=$ROLE_ARN" >> $GITHUB_ENV
+          echo "Role ARN: $ROLE_ARN"
+
       # Configure AWS credentials using OIDC (no access keys needed!)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ env.ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       # Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+
+      # Discover EC2 instance ID dynamically
+      - name: Get EC2 Instance ID
+        id: get-instance
+        run: |
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters \
+              "Name=instance-state-name,Values=running" \
+              "Name=tag:Name,Values=${PROJECT_NAME}-instance" \
+            --query 'Reservations[0].Instances[0].InstanceId' \
+            --output text)
+
+          if [ "$INSTANCE_ID" = "None" ] || [ -z "$INSTANCE_ID" ]; then
+            echo "❌ No running EC2 instance found with tag Name=${PROJECT_NAME}-instance"
+            exit 1
+          fi
+
+          echo "EC2_INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_ENV
+          echo "Found EC2 Instance: $INSTANCE_ID"
 
       # Build and push backend Docker image
       - name: Build and push backend image
@@ -67,6 +100,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           # Send commands to EC2 via SSM
+          echo "Deploying to instance: ${{ env.EC2_INSTANCE_ID }}"
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids ${{ env.EC2_INSTANCE_ID }} \
             --document-name "AWS-RunShellScript" \

@@ -109,7 +109,20 @@ resource "aws_iam_role_policy" "github_actions_ssm" {
           "ssm:DescribeInstanceInformation"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeInstances"
+        ]
+        Resource = "*"
       }
     ]
   })
+}
+
+# Output the role ARN for GitHub Actions
+output "github_actions_role_arn" {
+  description = "ARN of the GitHub Actions OIDC role"
+  value       = aws_iam_role.github_actions.arn
 }
