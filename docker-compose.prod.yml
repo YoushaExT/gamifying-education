@@ -44,7 +44,7 @@ services:
       # Enable Traefik for dashboard
       - "traefik.enable=true"
       # Dashboard router
-      - "traefik.http.routers.dashboard.rule=Host(`${DOMAIN_NAME}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.dashboard.rule=Host(`${DOMAIN}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.dashboard.service=api@internal"
@@ -63,11 +63,6 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      - POSTGRES_SERVER=${DB_HOST}
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
     networks:
       - traefik-public
       - backend-network
@@ -82,7 +77,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-public"
       # HTTP router for API
-      - "traefik.http.routers.backend.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/api/v1`, `/docs`, `/redoc`, `/openapi.json`)"
+      - "traefik.http.routers.backend.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/v1`, `/docs`, `/redoc`, `/openapi.json`)"
       - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls=true"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
@@ -118,7 +113,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-public"
       # HTTP router for frontend (catch-all)
-      - "traefik.http.routers.frontend.rule=Host(`${DOMAIN_NAME}`)"
+      - "traefik.http.routers.frontend.rule=Host(`${DOMAIN}`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls=true"
       - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
