@@ -1,6 +1,6 @@
 # IAM Role for EC2 Instance
 resource "aws_iam_role" "ec2_role" {
-  name               = "${var.project_name}-ec2-role"
+  name = "${var.project_name}-ec2-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -41,31 +41,6 @@ resource "aws_iam_role_policy" "route53_policy" {
           "route53:ChangeResourceRecordSets"
         ]
         Resource = "arn:aws:route53:::hostedzone/${var.route53_zone_id}"
-      }
-    ]
-  })
-}
-
-# Policy for S3 access (for backups)
-resource "aws_iam_role_policy" "s3_policy" {
-  name = "${var.project_name}-s3-policy"
-  role = aws_iam_role.ec2_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:PutObject",
-          "s3:GetObject",
-          "s3:ListBucket",
-          "s3:DeleteObject"
-        ]
-        Resource = [
-          aws_s3_bucket.backups.arn,
-          "${aws_s3_bucket.backups.arn}/*"
-        ]
       }
     ]
   })

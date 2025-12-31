@@ -23,8 +23,7 @@ Complete, **fully automated** Terraform deployment for your Gamifying Education 
 - `vpc.tf` - VPC, subnet, internet gateway, Elastic IP, Route 53 records
 - `security_groups.tf` - Firewall rules (SSH, HTTP, HTTPS)
 - `ec2.tf` - EC2 instance configuration
-- `iam.tf` - IAM roles for Route 53 and S3 access
-- `s3.tf` - S3 bucket for database backups with lifecycle policies
+- `iam.tf` - IAM roles for Route 53 and ECR access
 
 ### Automation
 - `user_data.sh` - **Fully automated** instance initialization script:
@@ -64,8 +63,8 @@ Run `terraform apply` and wait. Everything is configured automatically:
 ### 💰 Cost Optimized
 - Free Tier eligible (first 12 months)
 - Single instance architecture
-- S3 lifecycle policies for backups
-- ~$7-8/month after Free Tier
+- RDS automated backups (7 days retention)
+- ~$6-7/month after Free Tier
 
 ### 🔄 Idempotent
 All scripts can run multiple times safely:
@@ -77,7 +76,7 @@ All scripts can run multiple times safely:
 
 ### 1. Terraform Creates Infrastructure
 ```
-VPC → Subnet → Security Group → IAM Role → EC2 Instance → Elastic IP → Route 53 Records → S3 Bucket
+VPC → Subnet → Security Group → IAM Role → EC2 Instance → Elastic IP → Route 53 Records → ECR Repositories
 ```
 
 ### 2. User Data Runs Automatically (on First Boot)
@@ -324,14 +323,12 @@ terraform destroy  # Type 'yes' to confirm
 - 30GB EBS: **Free**
 - Elastic IP: **Free** (while instance running)
 - Data transfer: **Free** (first 100GB)
-- S3 storage: ~$0.50/month
-- **Total: ~$6/year**
+- **Total: Free**
 
 ### After Free Tier
 - EC2 t4g.micro: $3.50/month
 - EBS 30GB: $2.40/month
-- S3 backups: $0.50/month
-- **Total: $6.50/month (~$78/year)**
+- **Total: $6/month (~$72/year)**
 
 ## Architecture Diagram
 
@@ -346,19 +343,17 @@ Security Group (22, 80, 443)
     ↓
 EC2 t4g.micro (Ubuntu 24.04 ARM64)
 ┌─────────────────────────────────┐
-│ Nginx (443)                     │
+│ Traefik (443) - HTTPS/SSL       │
 │  ├─ Frontend (React)            │
 │  └─ Reverse Proxy → Backend     │
 │                                 │
 │ FastAPI Backend (8000)          │
 │  ├─ REST API                    │
 │  └─ WebSocket (game)            │
-│                                 │
-│ PostgreSQL (5432)               │
-│  └─ Database                    │
 └─────────────────────────────────┘
     ↓
-S3 Bucket (Automated Backups)
+RDS PostgreSQL (db.t3.micro)
+└─ Automated backups (7 days)
 ```
 
 ## Next Steps

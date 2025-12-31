@@ -23,11 +23,6 @@ output "ssh_command" {
   value       = "ssh -i ~/.ssh/${var.ssh_key_name}.pem ubuntu@${aws_eip.main.public_ip}"
 }
 
-output "s3_backup_bucket" {
-  description = "S3 bucket for backups"
-  value       = aws_s3_bucket.backups.id
-}
-
 output "route53_nameservers" {
   description = "Route 53 nameservers (verify these are set in your domain registrar)"
   value       = data.aws_route53_zone.main.name_servers
@@ -66,7 +61,7 @@ output "github_actions_role_arn" {
 
 output "next_steps" {
   description = "Next steps after deployment"
-  value       = <<-EOT
+  value = <<-EOT
     Deployment initiated! Follow these steps:
 
     1. Wait 10-15 minutes for:
@@ -75,8 +70,8 @@ output "next_steps" {
 
     2. SSH into the instance:
        ${join("\n       ", [
-         "ssh -i ~/.ssh/${var.ssh_key_name}.pem ubuntu@${aws_eip.main.public_ip}"
-       ])}
+  "ssh -i ~/.ssh/${var.ssh_key_name}.pem ubuntu@${aws_eip.main.public_ip}"
+])}
 
     3. Check initialization logs:
        sudo tail -f /var/log/cloud-init-output.log
@@ -96,8 +91,6 @@ output "next_steps" {
     7. RDS Database:
        - Endpoint: ${aws_db_instance.main.endpoint}
        - Database: ${aws_db_instance.main.db_name}
-       - Automated backups: 7 days retention
-
-    8. Backups are stored in S3 bucket: ${aws_s3_bucket.backups.id}
+       - Automated backups: 7 days retention (RDS)
   EOT
 }

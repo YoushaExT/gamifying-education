@@ -273,18 +273,18 @@ Test everything locally before deploying to AWS. Catch issues early!
   ```
 
 ### 5.2 Validate Configuration
-- [ ] Initialize (if not already done)
+- [x] Initialize (if not already done)
   ```bash
   terraform init
   ```
 
-- [ ] Validate syntax
+- [x] Validate syntax
   ```bash
   terraform validate
   # Should succeed
   ```
 
-- [ ] Format check
+- [x] Format check
   ```bash
   terraform fmt -check -recursive
   ```

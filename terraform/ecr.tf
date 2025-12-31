@@ -4,7 +4,7 @@ resource "aws_ecr_repository" "backend" {
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
-    scan_on_push = true  # Scan images for vulnerabilities
+    scan_on_push = true # Scan images for vulnerabilities
   }
 
   encryption_configuration {
@@ -43,9 +43,9 @@ resource "aws_ecr_lifecycle_policy" "backend" {
       rulePriority = 1
       description  = "Keep only last 5 images"
       selection = {
-        tagStatus     = "any"
-        countType     = "imageCountMoreThan"
-        countNumber   = 5
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 5
       }
       action = {
         type = "expire"
@@ -62,9 +62,9 @@ resource "aws_ecr_lifecycle_policy" "frontend" {
       rulePriority = 1
       description  = "Keep only last 5 images"
       selection = {
-        tagStatus     = "any"
-        countType     = "imageCountMoreThan"
-        countNumber   = 5
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 5
       }
       action = {
         type = "expire"

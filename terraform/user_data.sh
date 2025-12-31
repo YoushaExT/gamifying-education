@@ -197,44 +197,6 @@ ENV_FILE
 # Note: For initial deployment without ECR images, we need to build locally
 # This will be replaced by ECR images during CI/CD deployments
 
-# Setup backup script
-echo "=== Setting up automated backups ==="
-mkdir -p /opt/scripts
-mkdir -p /var/log
-
-cat > /opt/scripts/backup-db.sh << 'BACKUP_SCRIPT'
-#!/bin/bash
-set -e
-
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="/tmp/db_backup_$TIMESTAMP.sql.gz"
-S3_BUCKET="${s3_backup_bucket}"
-AWS_REGION="${aws_region}"
-DB_HOST=$(echo "${db_endpoint}" | cut -d: -f1)
-
-echo "Starting backup at $(date)"
-
-# Dump database from RDS
-PGPASSWORD='${db_password}' pg_dump -U app_user -h $DB_HOST gamifying_education | gzip > $BACKUP_FILE
-
-# Upload to S3
-aws s3 cp $BACKUP_FILE s3://$S3_BUCKET/backups/ --region $AWS_REGION
-
-# Cleanup old local backups (keep only last 3 days)
-find /tmp/db_backup_*.sql.gz -mtime +3 -delete
-
-echo "Backup completed at $(date)"
-BACKUP_SCRIPT
-
-chmod +x /opt/scripts/backup-db.sh
-
-# Setup cron job for daily backups at 2 AM (idempotent)
-(crontab -l 2>/dev/null | grep -v backup-db.sh; echo "0 2 * * * /opt/scripts/backup-db.sh >> /var/log/backup.log 2>&1") | crontab -
-
-# Run initial backup
-echo "=== Running initial backup ==="
-/opt/scripts/backup-db.sh || echo "WARNING: Initial backup failed, but will retry daily"
-
 # Setup automatic security updates
 echo "=== Configuring automatic security updates ==="
 DEBIAN_FRONTEND=noninteractive apt-get install -y unattended-upgrades

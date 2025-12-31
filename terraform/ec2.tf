@@ -55,8 +55,11 @@ resource "aws_instance" "main" {
     first_superuser_email    = var.first_superuser_email
     first_superuser_password = var.first_superuser_password
     openai_api_key           = var.openai_api_key
-    s3_backup_bucket         = aws_s3_bucket.backups.id
     aws_region               = var.aws_region
+    ecr_registry             = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
+    ecr_repository_backend   = aws_ecr_repository.backend.name
+    ecr_repository_frontend  = aws_ecr_repository.frontend.name
+    hosted_zone_id           = var.route53_zone_id
   })
 
   # Enable detailed monitoring (Free Tier includes basic monitoring)
@@ -73,10 +76,8 @@ resource "aws_instance" "main" {
     Name = "${var.project_name}-instance"
   }
 
-  # Wait for RDS and DNS before running user_data
+  # Wait for RDS before running user_data
   depends_on = [
-    aws_db_instance.main,
-    aws_route53_record.main,
-    aws_route53_record.www
+    aws_db_instance.main
   ]
 }

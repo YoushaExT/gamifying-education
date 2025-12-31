@@ -245,14 +245,12 @@ Store token in terraform.tfvars as a variable.
 - 30GB EBS: Free
 - Data transfer: Free (100GB/month)
 - Elastic IP: Free (while instance running)
-- S3 backups: ~$0.50/month
-- **Total: ~$6/year**
+- **Total: Free**
 
 **After Free Tier (Month 13+)**:
 - EC2 t4g.micro: ~$3.50/month
 - EBS 30GB: ~$2.40/month
-- S3 backups: ~$0.50/month
-- **Total: ~$6.50/month (~$78/year)**
+- **Total: ~$6/month (~$72/year)**
 
 ## Clean Up (Destroy Resources)
 
