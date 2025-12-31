@@ -290,12 +290,12 @@ Test everything locally before deploying to AWS. Catch issues early!
   ```
 
 ### 5.3 Create terraform.tfvars
-- [ ] Copy example file
+- [x] Copy example file
   ```bash
   cp terraform.tfvars.example terraform.tfvars
   ```
 
-- [ ] Fill in REQUIRED values (don't deploy yet, just prepare):
+- [x] Fill in REQUIRED values (don't deploy yet, just prepare):
   ```bash
   vim terraform.tfvars
   ```
@@ -312,21 +312,21 @@ Test everything locally before deploying to AWS. Catch issues early!
   - `openai_api_key` = "sk-..."
 
 ### 5.4 Get Route53 Zone ID
-- [ ] List hosted zones
+- [x] List hosted zones
   ```bash
   aws route53 list-hosted-zones --profile personal-terraform
   ```
 
-- [ ] Copy zone ID for yousha.click
+- [x] Copy zone ID for yousha.click
   ```bash
   # Zone ID looks like: /hostedzone/Z1234567890ABC
   # Use only the ID part: Z1234567890ABC
   ```
 
-- [ ] Update terraform.tfvars with zone ID
+- [x] Update terraform.tfvars with zone ID
 
 ### 5.5 Dry Run (Plan Only - Don't Apply Yet!)
-- [ ] Run terraform plan
+- [x] Run terraform plan
   ```bash
   terraform plan
   # Review what will be created
