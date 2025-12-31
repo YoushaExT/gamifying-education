@@ -24,10 +24,6 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
     git \
     curl \
     wget \
-    build-essential \
-    libpq-dev \
-    postgresql-client \
-    python3.12-venv \
     ufw \
     ca-certificates \
     gnupg \
@@ -43,8 +39,6 @@ if ! command -v aws &> /dev/null; then
     ./aws/install
     rm -rf aws awscliv2.zip
 fi
-
-# Note: postgresql-client only (for connecting to RDS), not full postgresql server
 
 # Install Docker
 echo "=== Installing Docker ==="
@@ -72,6 +66,10 @@ if ! command -v docker &> /dev/null; then
     # Start Docker
     systemctl enable docker
     systemctl start docker
+
+    # Add ubuntu user to docker group
+    usermod -aG docker ubuntu
+    echo "Ubuntu user added to docker group"
 else
     echo "Docker already installed"
 fi
@@ -84,10 +82,6 @@ ufw default allow outgoing || true
 ufw allow 22/tcp || true   # SSH
 ufw allow 80/tcp || true   # HTTP
 ufw allow 443/tcp || true  # HTTPS
-
-# Note: PostgreSQL is NOT installed locally - we're using RDS
-echo "=== Using RDS PostgreSQL (not local PostgreSQL) ==="
-echo "RDS endpoint: ${db_endpoint}"
 
 # Clone repository
 echo "=== Cloning repository ==="
@@ -116,30 +110,6 @@ else
 fi
 
 cd /opt/gamifying-education
-
-# Setup backend environment for initial migrations
-echo "=== Setting up backend environment for migrations ==="
-cd /opt/gamifying-education/backend
-
-# Install uv for Python package management (as ubuntu user)
-echo "=== Installing uv ==="
-sudo -u ubuntu bash -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
-
-# Create virtual environment and install dependencies (as ubuntu user)
-sudo -u ubuntu bash << 'SETUP_VENV'
-cd /opt/gamifying-education/backend
-export PATH="$HOME/.local/bin:$PATH"
-
-# Create virtual environment
-if [ ! -d ".venv" ]; then
-    python3 -m venv .venv
-fi
-
-# Activate and install dependencies
-source .venv/bin/activate
-pip install uv
-uv sync
-SETUP_VENV
 
 # Create .env file at project root (where .env.example is)
 echo "=== Creating .env file ==="
@@ -184,26 +154,6 @@ EOF
 # Fix ownership
 chown ubuntu:ubuntu /opt/gamifying-education/.env
 
-# Wait for RDS to be ready
-echo "=== Waiting for RDS database to be ready ==="
-DB_HOST=$(echo "${db_endpoint}" | cut -d: -f1)
-for i in {1..60}; do
-    if pg_isready -h $DB_HOST -U app_user > /dev/null 2>&1; then
-        echo "RDS database is ready!"
-        break
-    fi
-    echo "Waiting for RDS database... ($i/60)"
-    sleep 5
-done
-
-# Run database migrations (as ubuntu user)
-echo "=== Running database migrations ==="
-sudo -u ubuntu bash -c 'cd /opt/gamifying-education/backend && source .venv/bin/activate && alembic upgrade head' || {
-    echo "WARNING: Migration failed, trying to initialize database"
-    sudo -u ubuntu bash -c 'cd /opt/gamifying-education/backend && source .venv/bin/activate && alembic revision --autogenerate -m "Initial migration"' || true
-    sudo -u ubuntu bash -c 'cd /opt/gamifying-education/backend && source .venv/bin/activate && alembic upgrade head' || true
-}
-
 # Add docker-compose specific variables to existing .env
 echo "=== Adding docker-compose configuration to .env ==="
 cat >> /opt/gamifying-education/.env << EOF
@@ -225,8 +175,179 @@ EOF
 # Fix ownership again
 chown ubuntu:ubuntu /opt/gamifying-education/.env
 
-# Note: For initial deployment without ECR images, we need to build locally
-# This will be replaced by ECR images during CI/CD deployments
+# ============================================================
+# ECR AUTHENTICATION AND IMAGE DEPLOYMENT
+# ============================================================
+
+echo "=== Authenticating with AWS ECR ==="
+AWS_REGION="${aws_region}"
+ECR_REGISTRY="${ecr_registry}"
+
+# Login to ECR using instance IAM role
+aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to authenticate with ECR"
+    echo "Please check IAM permissions for ECR access"
+    exit 1
+fi
+
+echo "✓ ECR authentication successful"
+
+# ============================================================
+# CHECK ECR IMAGES EXIST
+# ============================================================
+
+echo "=== Checking for required Docker images in ECR ==="
+
+# Function to check if image exists in ECR
+check_ecr_image() {
+    local REPO_NAME=$1
+    local IMAGE_TAG=$2
+
+    aws ecr describe-images \
+        --repository-name $REPO_NAME \
+        --image-ids imageTag=$IMAGE_TAG \
+        --region $AWS_REGION \
+        --output json > /dev/null 2>&1
+
+    return $?
+}
+
+# Extract repository names
+BACKEND_REPO="${ecr_repository_backend}"
+FRONTEND_REPO="${ecr_repository_frontend}"
+
+# Check both images
+BACKEND_EXISTS=false
+FRONTEND_EXISTS=false
+
+if check_ecr_image "$BACKEND_REPO" "latest"; then
+    echo "✓ Backend image found: $BACKEND_REPO:latest"
+    BACKEND_EXISTS=true
+else
+    echo "✗ Backend image NOT found: $BACKEND_REPO:latest"
+fi
+
+if check_ecr_image "$FRONTEND_REPO" "latest"; then
+    echo "✓ Frontend image found: $FRONTEND_REPO:latest"
+    FRONTEND_EXISTS=true
+else
+    echo "✗ Frontend image NOT found: $FRONTEND_REPO:latest"
+fi
+
+# If images don't exist, provide clear instructions
+if [ "$BACKEND_EXISTS" = false ] || [ "$FRONTEND_EXISTS" = false ]; then
+    cat > /opt/.ecr-images-missing << EOF
+========================================
+ERROR: Required Docker images not found in ECR
+========================================
+
+REQUIRED ACTION: Push images to ECR before services can start
+
+Step 1: On your LOCAL machine, build the images:
+  cd /path/to/gamifying-education
+  docker build -t $BACKEND_REPO:latest ./backend
+  docker build -t $FRONTEND_REPO:latest ./frontend
+
+Step 2: Authenticate with ECR (LOCAL machine):
+  aws ecr get-login-password --region $AWS_REGION | \\
+    docker login --username AWS --password-stdin $ECR_REGISTRY
+
+Step 3: Tag images for ECR (LOCAL machine):
+  docker tag $BACKEND_REPO:latest $ECR_REGISTRY/$BACKEND_REPO:latest
+  docker tag $FRONTEND_REPO:latest $ECR_REGISTRY/$FRONTEND_REPO:latest
+
+Step 4: Push images to ECR (LOCAL machine):
+  docker push $ECR_REGISTRY/$BACKEND_REPO:latest
+  docker push $ECR_REGISTRY/$FRONTEND_REPO:latest
+
+Step 5: Deploy on THIS instance:
+  ssh ubuntu@$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+  cd /opt/gamifying-education
+  docker compose -f docker-compose.prod.yml pull
+  docker compose -f docker-compose.prod.yml up -d
+
+For detailed instructions, see: deployment.md
+========================================
+EOF
+
+    cat /opt/.ecr-images-missing
+    # Mark deployment as complete to prevent re-run, but note images missing
+    touch /opt/.deployment-complete
+    echo "Instance initialization PAUSED: Waiting for ECR images"
+    echo "The instance is ready. Push Docker images to ECR and run docker compose manually."
+    exit 0
+fi
+
+echo "✓ All required ECR images are available"
+
+# ============================================================
+# PULL IMAGES AND START SERVICES
+# ============================================================
+
+echo "=== Pulling Docker images from ECR ==="
+cd /opt/gamifying-education
+
+docker compose -f docker-compose.prod.yml pull
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to pull Docker images from ECR"
+    echo "Check logs and ECR permissions"
+    touch /opt/.docker-pull-failed
+    exit 1
+fi
+
+echo "✓ Docker images pulled successfully"
+
+# ============================================================
+# START APPLICATION SERVICES
+# ============================================================
+
+echo "=== Starting application services with docker-compose ==="
+
+docker compose -f docker-compose.prod.yml up -d
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to start Docker services"
+    echo "Check logs: docker compose -f docker-compose.prod.yml logs"
+    touch /opt/.docker-compose-failed
+    exit 1
+fi
+
+echo "✓ Docker services started"
+
+# Wait for services to be healthy
+echo "Waiting for backend service to be healthy (max 5 minutes)..."
+HEALTHY=false
+
+for i in {1..60}; do
+    if docker compose -f docker-compose.prod.yml ps backend 2>/dev/null | grep -q "healthy"; then
+        echo "✓ Backend service is healthy!"
+        HEALTHY=true
+        break
+    fi
+
+    # Check if container is running at all
+    if ! docker compose -f docker-compose.prod.yml ps backend 2>/dev/null | grep -q "Up"; then
+        echo "⚠ Backend container is not running. Checking logs..."
+        docker compose -f docker-compose.prod.yml logs backend | tail -20
+        echo "Container failed to start. Check full logs: docker compose -f docker-compose.prod.yml logs backend"
+        break
+    fi
+
+    echo "Waiting for backend health check... ($i/60)"
+    sleep 5
+done
+
+if [ "$HEALTHY" = true ]; then
+    echo "✓ Application deployment successful - all services healthy"
+else
+    echo "⚠ Backend service started but not yet healthy"
+    echo "This is normal if migrations are still running"
+    echo "Check status with: docker compose -f docker-compose.prod.yml ps"
+    echo "Check logs with: docker compose -f docker-compose.prod.yml logs backend"
+fi
 
 # Setup automatic security updates
 echo "=== Configuring automatic security updates ==="
@@ -322,20 +443,28 @@ chmod +x /usr/local/bin/app-logs
 touch /opt/.deployment-complete
 
 echo "=== Instance initialization completed at $(date) ==="
-echo "=== Next Steps ==="
-echo "1. Configure ECR and push Docker images"
-echo "2. Update .env file with ECR image URLs"
-echo "3. Run: cd /opt/gamifying-education && docker compose up -d"
+echo "=== Application Status ==="
+echo "✓ Docker and AWS CLI installed"
+echo "✓ Repository cloned"
+echo "✓ Environment configured"
+echo "✓ ECR authenticated"
+echo "✓ Docker images pulled from ECR"
+echo "✓ Application services started"
+echo ""
+echo "=== Access Your Application ==="
+echo "URL: https://${domain_name}"
+echo "Login: ${first_superuser_email}"
 echo ""
 echo "=== Quick Commands ==="
-echo "app-status  - Check application status"
-echo "app-deploy  - Deploy latest changes"
-echo "app-restart - Restart all services"
-echo "app-logs    - View logs (app-logs backend/frontend/traefik)"
+echo "app-status   - Check application status"
+echo "app-deploy   - Deploy latest changes from ECR"
+echo "app-restart  - Restart all services"
+echo "app-logs     - View logs (app-logs backend/frontend/traefik)"
 echo ""
-echo "=== Manual Docker Commands ==="
+echo "=== Docker Commands ==="
 echo "cd /opt/gamifying-education"
-echo "docker compose up -d        - Start services"
-echo "docker compose down         - Stop services"
-echo "docker compose logs -f      - View logs"
-echo "docker compose ps           - List containers"
+echo "docker compose -f docker-compose.prod.yml ps           - List containers"
+echo "docker compose -f docker-compose.prod.yml logs -f      - View logs"
+echo "docker compose -f docker-compose.prod.yml pull         - Pull latest images"
+echo "docker compose -f docker-compose.prod.yml up -d        - Restart services"
+echo "docker compose -f docker-compose.prod.yml down         - Stop services"
