@@ -89,66 +89,66 @@ resource "aws_instance" "test" {
 
   # Simple user data to install nginx and show "Hello from Terraform!"
   user_data = <<-EOF
-              #!/bin/bash
-              apt-get update
-              apt-get install -y nginx
+#!/bin/bash
+apt-get update
+apt-get install -y nginx
 
-              cat > /var/www/html/index.html <<HTML
-              <!DOCTYPE html>
-              <html>
-              <head>
-                  <title>Terraform Test</title>
-                  <style>
-                      body {
-                          font-family: Arial, sans-serif;
-                          display: flex;
-                          justify-content: center;
-                          align-items: center;
-                          height: 100vh;
-                          margin: 0;
-                          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                          color: white;
-                      }
-                      .container {
-                          text-align: center;
-                          padding: 50px;
-                          background: rgba(255, 255, 255, 0.1);
-                          border-radius: 20px;
-                          backdrop-filter: blur(10px);
-                      }
-                      h1 {
-                          font-size: 3em;
-                          margin-bottom: 20px;
-                      }
-                      .emoji {
-                          font-size: 5em;
-                          margin: 20px 0;
-                      }
-                      .info {
-                          margin-top: 30px;
-                          font-size: 1.2em;
-                          opacity: 0.9;
-                      }
-                  </style>
-              </head>
-              <body>
-                  <div class="container">
-                      <div class="emoji">🚀</div>
-                      <h1>Hello from Terraform!</h1>
-                      <p>Your AWS setup is working correctly!</p>
-                      <div class="info">
-                          <p><strong>Instance:</strong> $(ec2-metadata --instance-id | cut -d ' ' -f 2)</p>
-                          <p><strong>Region:</strong> ${var.aws_region}</p>
-                          <p><strong>Instance Type:</strong> ${var.instance_type}</p>
-                          <p><strong>Time:</strong> $(date)</p>
-                      </div>
-                  </div>
-              </body>
-              </html>
+cat > /var/www/html/index.html <<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Terraform Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+        .emoji {
+            font-size: 5em;
+            margin: 20px 0;
+        }
+        .info {
+            margin-top: 30px;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="emoji">🚀</div>
+        <h1>Hello from Terraform!</h1>
+        <p>Your AWS setup is working correctly!</p>
+        <div class="info">
+            <p><strong>Instance:</strong> $(ec2-metadata --instance-id | cut -d ' ' -f 2)</p>
+            <p><strong>Region:</strong> ${var.aws_region}</p>
+            <p><strong>Instance Type:</strong> ${var.instance_type}</p>
+            <p><strong>Time:</strong> $(date)</p>
+        </div>
+    </div>
+</body>
+</html>
 HTML
 
-              systemctl restart nginx
-              EOF
+systemctl restart nginx
+EOF
 
   tags = {
     Name = "terraform-test-instance"

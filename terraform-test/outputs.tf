@@ -35,7 +35,7 @@ output "next_steps" {
 
   2. Test SSH connection:
      ${join("\n     ", [
-  "ssh -i ~/.ssh/${var.ssh_key_name}.pem ubuntu@${aws_instance.test.public_ip}"
+  "ssh -i ~/.ssh/${var.ssh_key_name} ubuntu@${aws_instance.test.public_ip}"
   ])}
 
   3. Test web server (wait 2-3 minutes after instance launch):
