@@ -344,13 +344,13 @@ Test everything locally before deploying to AWS. Catch issues early!
   terraform init
   ```
 
-- [ ] Validate syntax
+- [x] Validate syntax
   ```bash
   terraform validate
   # Should succeed
   ```
 
-- [ ] Format check
+- [x] Format check
   ```bash
   terraform fmt -check -recursive
   ```
@@ -392,37 +392,37 @@ Test everything locally before deploying to AWS. Catch issues early!
 - [x] Update terraform.tfvars with zone ID
 
 ### 6.5 Dry Run (Plan Only - Don't Apply Yet!)
-- [ ] Run terraform plan
+- [x] Run terraform plan
   ```bash
   terraform plan
   # Review what will be created
   # DO NOT run 'terraform apply' yet!
   ```
 
-- [ ] Verify plan looks correct:
-  - [ ] EC2 instance will be created
-  - [ ] RDS database will be created
-  - [ ] Route53 A records will be created
-  - [ ] Security groups look correct
-  - [ ] No errors in plan
+- [x] Verify plan looks correct:
+  - [x] EC2 instance will be created
+  - [x] RDS database will be created
+  - [x] Route53 A records will be created
+  - [x] Security groups look correct
+  - [x] No errors in plan
 
 ---
 
 ## 7. Local Development Stack Test
 
 ### 7.1 Test Full Stack Locally
-- [ ] Navigate to project root
+- [x] Navigate to project root
   ```bash
   cd ~/IBA/fyp/gamifying-education
   ```
 
-- [ ] Create backend .env if missing
+- [x] Create backend .env if missing
   ```bash
   cd backend
   cp .env.example .env 2>/dev/null || echo ".env exists"
   ```
 
-- [ ] Start local stack with docker compose
+- [x] Start local stack with docker compose
   ```bash
   cd ..
   docker compose up -d
