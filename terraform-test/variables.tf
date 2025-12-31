@@ -18,5 +18,5 @@ variable "ssh_key_name" {
 variable "instance_type" {
   description = "EC2 instance type (use t2.micro for free tier on x86)"
   type        = string
-  default     = "t2.micro"  # Free tier eligible
+  default     = "t2.micro" # Free tier eligible
 }

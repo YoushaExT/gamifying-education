@@ -25,7 +25,7 @@ output "web_url" {
 
 output "next_steps" {
   description = "What to do next"
-  value       = <<-EOT
+  value = <<-EOT
 
   ╔══════════════════════════════════════════════════════════════════╗
   ║                    TEST DEPLOYMENT SUCCESSFUL! ✅                ║
@@ -35,14 +35,14 @@ output "next_steps" {
 
   2. Test SSH connection:
      ${join("\n     ", [
-       "ssh -i ~/.ssh/${var.ssh_key_name}.pem ubuntu@${aws_instance.test.public_ip}"
-     ])}
+  "ssh -i ~/.ssh/${var.ssh_key_name}.pem ubuntu@${aws_instance.test.public_ip}"
+  ])}
 
   3. Test web server (wait 2-3 minutes after instance launch):
      ${join("\n     ", [
-       "Open in browser: http://${aws_instance.test.public_ip}",
-       "Or command line: curl http://${aws_instance.test.public_ip}"
-     ])}
+  "Open in browser: http://${aws_instance.test.public_ip}",
+  "Or command line: curl http://${aws_instance.test.public_ip}"
+])}
 
   4. When done testing, destroy resources:
      terraform destroy
