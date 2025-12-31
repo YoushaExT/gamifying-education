@@ -47,16 +47,8 @@ jobs:
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:latest
-          echo "backend_image=$ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      # Build frontend
-      - name: Build frontend
-        run: |
-          cd frontend
-          npm ci
-          npm run build
-
-      # Build and push frontend Docker image (nginx with built files)
+      # Build and push frontend Docker image
       - name: Build and push frontend image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -75,23 +67,59 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           # Send commands to EC2 via SSM
-          aws ssm send-command \
+          COMMAND_ID=$(aws ssm send-command \
             --instance-ids ${{ env.EC2_INSTANCE_ID }} \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy new version with Traefik" \
-            --parameters 'commands=[
-              "cd /opt/gamifying-education",
-              "git pull || true",
-              "aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}",
-              "docker compose -f docker-compose.prod.yml pull",
-              "docker compose -f docker-compose.prod.yml up -d --remove-orphans",
-              "docker system prune -af --volumes=false",
-              "sleep 10",
-              "docker compose -f docker-compose.prod.yml ps"
-            ]' \
-            --output text
+            --comment "Deploy new version" \
+            --parameters commands="[
+              \"cd /opt/gamifying-education\",
+              \"git pull origin main || true\",
+              \"aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}\",
+              \"docker compose -f docker-compose.prod.yml pull\",
+              \"docker compose -f docker-compose.prod.yml up -d --remove-orphans\",
+              \"docker system prune -af --volumes=false\",
+              \"echo 'Waiting for services to be healthy...'\",
+              \"sleep 15\",
+              \"docker compose -f docker-compose.prod.yml ps\"
+            ]" \
+            --output text \
+            --query 'Command.CommandId')
+
+          echo "Command ID: $COMMAND_ID"
+          echo "COMMAND_ID=$COMMAND_ID" >> $GITHUB_ENV
+
+          # Wait for command to complete
+          echo "Waiting for deployment command to complete..."
+          sleep 10
 
       - name: Verify deployment
         run: |
-          echo "Deployment initiated for commit ${{ github.sha }}"
-          echo "Check logs: aws ssm describe-instance-information --instance-ids ${{ env.EC2_INSTANCE_ID }}"
+          echo "Checking deployment status for commit ${{ github.sha }}"
+
+          # Get command result
+          aws ssm get-command-invocation \
+            --command-id ${{ env.COMMAND_ID }} \
+            --instance-id ${{ env.EC2_INSTANCE_ID }} \
+            --query 'StandardOutputContent' \
+            --output text
+
+          # Check if command succeeded
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id ${{ env.COMMAND_ID }} \
+            --instance-id ${{ env.EC2_INSTANCE_ID }} \
+            --query 'Status' \
+            --output text)
+
+          echo "Deployment status: $STATUS"
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "❌ Deployment failed!"
+            aws ssm get-command-invocation \
+              --command-id ${{ env.COMMAND_ID }} \
+              --instance-id ${{ env.EC2_INSTANCE_ID }} \
+              --query 'StandardErrorContent' \
+              --output text
+            exit 1
+          fi
+
+          echo "✅ Deployment successful!"
