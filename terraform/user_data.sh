@@ -28,6 +28,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
     libpq-dev \
     postgresql-client \
+    python3.12-venv \
     ufw \
     ca-certificates \
     gnupg \
@@ -95,6 +96,9 @@ if [ ! -d "gamifying-education" ]; then
         echo "ERROR: Failed to clone repository from ${github_repo_url}"
         mkdir -p gamifying-education
     }
+
+    # Fix ownership (cloned as root, need ubuntu user to own it)
+    chown -R ubuntu:ubuntu /opt/gamifying-education
 else
     echo "Repository already exists, pulling latest changes"
     cd /opt/gamifying-education
@@ -107,20 +111,25 @@ cd /opt/gamifying-education
 echo "=== Setting up backend environment for migrations ==="
 cd /opt/gamifying-education/backend
 
-# Install uv for Python package management
+# Install uv for Python package management (as ubuntu user)
 echo "=== Installing uv ==="
-if [ ! -f /root/.cargo/bin/uv ]; then
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-fi
-export PATH="/root/.cargo/bin:$PATH"
+sudo -u ubuntu bash -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
 
-# Create virtual environment and install dependencies (for migrations only)
+# Create virtual environment and install dependencies (as ubuntu user)
+sudo -u ubuntu bash << 'SETUP_VENV'
+cd /opt/gamifying-education/backend
+export PATH="$HOME/.local/bin:$PATH"
+
+# Create virtual environment
 if [ ! -d ".venv" ]; then
-    python3.12 -m venv .venv || python3 -m venv .venv
+    python3 -m venv .venv
 fi
+
+# Activate and install dependencies
 source .venv/bin/activate
-pip install uv || true
-uv sync --frozen || uv sync || true
+pip install uv
+uv sync
+SETUP_VENV
 
 # Create .env file for backend
 echo "=== Creating backend .env file ==="
@@ -166,14 +175,17 @@ for i in {1..60}; do
     sleep 5
 done
 
-# Run database migrations
+# Run database migrations (as ubuntu user)
 echo "=== Running database migrations ==="
+sudo -u ubuntu bash << 'RUN_MIGRATIONS'
+cd /opt/gamifying-education/backend
 source .venv/bin/activate
 alembic upgrade head || {
     echo "WARNING: Migration failed, trying to initialize database"
     alembic revision --autogenerate -m "Initial migration" || true
     alembic upgrade head || true
 }
+RUN_MIGRATIONS
 
 # Create environment file for docker-compose
 echo "=== Creating docker-compose environment file ==="
