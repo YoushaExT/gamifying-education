@@ -61,7 +61,7 @@ services:
     container_name: gamifying-education-backend
     restart: unless-stopped
     env_file:
-      - ./backend/.env
+      - .env
     environment:
       - POSTGRES_SERVER=${DB_HOST}
       - POSTGRES_DB=${DB_NAME}
