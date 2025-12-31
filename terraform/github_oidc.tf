@@ -75,8 +75,8 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
           "ecr:CompleteLayerUpload"
         ]
         Resource = [
-          aws_ecr_repository.backend.arn,
-          aws_ecr_repository.frontend.arn
+          data.aws_ecr_repository.backend.arn,
+          data.aws_ecr_repository.frontend.arn
         ]
       }
     ]
