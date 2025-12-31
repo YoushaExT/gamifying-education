@@ -35,7 +35,7 @@ jobs:
           docker save -o /tmp/images.tar $(docker compose -f docker-compose.yml config --images)
 
       - name: Copy images to server
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
