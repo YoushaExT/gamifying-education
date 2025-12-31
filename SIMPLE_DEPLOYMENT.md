@@ -2,6 +2,8 @@
 
 Stop overthinking it. Here's what you actually need to do.
 
+**⚠️ First Time?** Complete `PRE_DEPLOYMENT_CHECKLIST.md` first to test everything locally!
+
 ---
 
 ## One-Time Setup (Do Once, Never Again)

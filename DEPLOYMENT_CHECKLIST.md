@@ -2,6 +2,8 @@
 
 Simple checklist - only the essentials.
 
+**⚠️ First Time?** Complete `PRE_DEPLOYMENT_CHECKLIST.md` first to verify everything works locally!
+
 ---
 
 ## One-Time Setup (First Deployment Only)
