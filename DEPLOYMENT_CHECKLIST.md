@@ -39,33 +39,33 @@ Complete this checklist step-by-step. Check off each item as you complete it.
 
 ### 1.3 Domain Setup
 - [x] Domain registered: `yousha.click` ✓ (you have this)
-- [x] Access to domain registrar (Namecheap, GoDaddy, etc.)
+- [x] Access to domain registrar (I bought domain from AWS)
 - [ ] Note: You'll update nameservers later after terraform creates Route53 zone
 
 ### 1.4 Generate SSH Key for EC2
-- [ ] Generate SSH key pair for EC2 access
+- [x] Generate SSH key pair for EC2 access
   ```bash
   ssh-keygen -t rsa -b 4096 -f ~/.ssh/gamifying-education-key -C "EC2 access key"
   # Press Enter for no passphrase (or set one if you prefer)
   ```
 
-- [ ] Verify key created
+- [x] Verify key created
   ```bash
   ls -l ~/.ssh/gamifying-education-key*
   # Should see: gamifying-education-key and gamifying-education-key.pub
   ```
 
-- [ ] Set correct permissions
+- [x] Set correct permissions
   ```bash
   chmod 400 ~/.ssh/gamifying-education-key
   ```
 
 ### 1.5 Gather Required Credentials
-- [ ] OpenAI API key ready
+- [x] OpenAI API key ready
   - Get from: https://platform.openai.com/api-keys
   - Format: `sk-...`
 
-- [ ] Admin email: `yousha234@gmail.com` ✓
+- [x] Admin email: `yousha234@gmail.com` ✓
 
 - [ ] Choose secure passwords (save these securely):
   - [ ] Database password (PostgreSQL RDS)
