@@ -1,351 +1,396 @@
-# FastAPI Project - Deployment
+# Deployment Guide - Modern AWS Setup
 
-You can deploy the project using Docker Compose to a remote server.
+**Primary deployment method**: Modern AWS infrastructure with OIDC authentication and automated CI/CD.
 
-This project expects you to have a Traefik proxy handling communication to the outside world and HTTPS certificates.
+## 🚀 Overview
 
-You can use CI/CD (continuous integration and continuous deployment) systems to deploy automatically, there are already configurations to do it with GitHub Actions.
+This project uses a **fully automated AWS deployment** with:
+- ✅ EC2 + RDS (managed database)
+- ✅ GitHub Actions with **OIDC** (no AWS keys!)
+- ✅ Amazon ECR (private Docker registry)
+- ✅ Nginx with Let's Encrypt SSL
+- ✅ Terraform infrastructure as code
+- ✅ SSM Session Manager (no SSH key management)
 
-But you have to configure a couple things first. 🤓
+**Domain**: `devops-assignment.today`
 
-## Preparation
+## 📚 Documentation Structure
 
-* Have a remote server ready and available.
-* Configure the DNS records of your domain to point to the IP of the server you just created.
-* Configure a wildcard subdomain for your domain, so that you can have multiple subdomains for different services, e.g. `*.fastapi-project.example.com`. This will be useful for accessing different components, like `dashboard.fastapi-project.example.com`, `api.fastapi-project.example.com`, `traefik.fastapi-project.example.com`, `adminer.fastapi-project.example.com`, etc. And also for `staging`, like `dashboard.staging.fastapi-project.example.com`, `adminer.staging.fastapi-project.example.com`, etc.
-* Install and configure [Docker](https://docs.docker.com/engine/install/) on the remote server (Docker Engine, not Docker Desktop).
+| Document | Purpose | When to Use |
+|----------|---------|-------------|
+| **DEPLOYMENT_SUMMARY.md** | Complete overview of both test and production | Start here for big picture |
+| **terraform-test/README.md** | Test deployment (hello world) | Before main deployment |
+| **terraform/QUICK_START.md** | 5-step production deployment | Quick deployment guide |
+| **terraform/CI_CD_SETUP.md** | Complete CI/CD setup | Setting up automated deployments |
+| **CI_CD_README.md** | CI/CD quick reference | Quick CI/CD commands |
+| **my-deployment.md** | Architecture and cost details | Understanding the setup |
 
-## Public Traefik
+## 🎯 Quick Start Paths
 
-We need a Traefik proxy to handle incoming connections and HTTPS certificates.
-
-You need to do these next steps only once.
-
-### Traefik Docker Compose
-
-* Create a remote directory to store your Traefik Docker Compose file:
-
-```bash
-mkdir -p /root/code/traefik-public/
-```
-
-Copy the Traefik Docker Compose file to your server. You could do it by running the command `rsync` in your local terminal:
-
-```bash
-rsync -a docker-compose.traefik.yml root@your-server.example.com:/root/code/traefik-public/
-```
-
-### Traefik Public Network
-
-This Traefik will expect a Docker "public network" named `traefik-public` to communicate with your stack(s).
-
-This way, there will be a single public Traefik proxy that handles the communication (HTTP and HTTPS) with the outside world, and then behind that, you could have one or more stacks with different domains, even if they are on the same single server.
-
-To create a Docker "public network" named `traefik-public` run the following command in your remote server:
+### Path 1: Infrastructure Only (No CI/CD)
+**Just deploy the infrastructure and run the app**
 
 ```bash
-docker network create traefik-public
+# 1. Test deployment first
+cd terraform-test/
+# Follow terraform-test/README.md
+
+# 2. Deploy production infrastructure
+cd ../terraform/
+# Follow terraform/QUICK_START.md
 ```
 
-### Traefik Environment Variables
+**Result**: App running at https://devops-assignment.today
+**Deployment**: Manual (SSH to update)
 
-The Traefik Docker Compose file expects some environment variables to be set in your terminal before starting it. You can do it by running the following commands in your remote server.
-
-* Create the username for HTTP Basic Auth, e.g.:
+### Path 2: Infrastructure + CI/CD (Recommended)
+**Deploy infrastructure AND automated deployments**
 
 ```bash
-export USERNAME=admin
+# 1. Deploy infrastructure
+cd terraform/
+# Follow terraform/QUICK_START.md
+
+# 2. Setup CI/CD
+# Follow CI_CD_README.md or terraform/CI_CD_SETUP.md
 ```
 
-* Create an environment variable with the password for HTTP Basic Auth, e.g.:
+**Result**: App running at https://devops-assignment.today
+**Deployment**: Automatic on git push to main!
+
+## 📋 Prerequisites
+
+- AWS account (Free Tier eligible)
+- AWS CLI configured
+- Terraform installed
+- Domain in Route 53: `devops-assignment.today`
+- OpenAI API key
+- GitHub repository (for CI/CD)
+
+## 🏗️ Architecture
+
+```
+GitHub (Code Push)
+    ↓ (OIDC Auth)
+GitHub Actions
+    ↓
+Amazon ECR (Docker Images)
+    ↓ (SSM Deploy)
+EC2 t4g.micro (Public Subnet)
+├── Nginx (SSL, Frontend)
+└── FastAPI Backend
+    ↓
+RDS PostgreSQL db.t3.micro (Private Subnet)
+    ↓
+S3 (Backups)
+```
+
+## 💰 Cost
+
+**First Year** (AWS Free Tier):
+- With db.t3.micro: ~$6-10/month
+- With db.t4g.micro: ~$12-15/month
+
+**After Free Tier**: ~$21/month
+
+**With CI/CD**: Add ~$1-3/month (ECR storage)
+
+See `my-deployment.md` for detailed cost breakdown.
+
+## 🔧 Deployment Steps
+
+### Step 1: Test Deployment (5 minutes)
+
+Verify AWS setup works:
 
 ```bash
-export PASSWORD=changethis
+cd terraform-test/
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your SSH key name
+terraform init
+terraform apply
+# Visit http://<IP> to see "Hello from Terraform!"
+terraform destroy  # Clean up
 ```
 
-* Use openssl to generate the "hashed" version of the password for HTTP Basic Auth and store it in an environment variable:
+**Details**: See `terraform-test/README.md`
+
+### Step 2: Production Infrastructure (15 minutes)
+
+Deploy the full application:
 
 ```bash
-export HASHED_PASSWORD=$(openssl passwd -apr1 $PASSWORD)
+cd terraform/
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars (see QUICK_START.md)
+terraform init
+terraform apply
+# Wait 12-15 minutes for automatic setup
 ```
 
-To verify that the hashed password is correct, you can print it:
+**Access**: https://devops-assignment.today
+
+**Details**: See `terraform/QUICK_START.md`
+
+### Step 3: CI/CD Setup (Optional, 10 minutes)
+
+Enable automatic deployments:
 
 ```bash
-echo $HASHED_PASSWORD
+# 1. Add github_repo to terraform.tfvars
+# 2. terraform apply
+# 3. Add GitHub secrets (AWS_ROLE_ARN, EC2_INSTANCE_ID)
+# 4. Install Docker on EC2
+# 5. Push to main branch
 ```
 
-* Create an environment variable with the domain name for your server, e.g.:
+**Details**: See `CI_CD_README.md` or `terraform/CI_CD_SETUP.md`
 
+## 🔄 Deployment Workflows
+
+### Without CI/CD (Manual)
 ```bash
-export DOMAIN=fastapi-project.example.com
+# SSH to EC2
+ssh -i ~/.ssh/key.pem ubuntu@<IP>
+
+# Pull latest code
+cd /opt/gamifying-education
+git pull
+
+# Restart services
+sudo systemctl restart gamifying-education-backend
+sudo systemctl reload nginx
 ```
 
-* Create an environment variable with the email for Let's Encrypt, e.g.:
-
+### With CI/CD (Automatic)
 ```bash
-export EMAIL=admin@example.com
+# Just push to main!
+git push origin main
+
+# GitHub Actions will:
+# 1. Build Docker images
+# 2. Push to ECR
+# 3. Deploy to EC2
+# 4. Restart containers
 ```
 
-**Note**: you need to set a different email, an email `@example.com` won't work.
+## 🛠️ Common Tasks
 
-### Start the Traefik Docker Compose
+### Update Application
+**With CI/CD**: `git push origin main`
 
-Go to the directory where you copied the Traefik Docker Compose file in your remote server:
+**Without CI/CD**: See manual steps above
 
+### View Logs
 ```bash
-cd /root/code/traefik-public/
+ssh -i ~/.ssh/key.pem ubuntu@<IP>
+
+# Backend logs
+sudo journalctl -u gamifying-education-backend -f
+
+# Nginx logs
+sudo tail -f /var/log/nginx/error.log
+
+# With Docker (CI/CD):
+docker logs -f gamifying-education-backend
 ```
 
-Now with the environment variables set and the `docker-compose.traefik.yml` in place, you can start the Traefik Docker Compose running the following command:
-
+### Database Backups
 ```bash
-docker compose -f docker-compose.traefik.yml up -d
+# Automatic: RDS backups (7 days retention)
+# Manual: S3 backups (daily at 2 AM)
+
+# Trigger manual backup
+ssh -i ~/.ssh/key.pem ubuntu@<IP>
+sudo /opt/scripts/backup-db.sh
+
+# List backups
+aws s3 ls s3://<bucket-name>/backups/
 ```
 
-## Deploy the FastAPI Project
-
-Now that you have Traefik in place you can deploy your FastAPI project with Docker Compose.
-
-**Note**: You might want to jump ahead to the section about Continuous Deployment with GitHub Actions.
-
-## Environment Variables
-
-You need to set some environment variables first.
-
-Set the `ENVIRONMENT`, by default `local` (for development), but when deploying to a server you would put something like `staging` or `production`:
-
+### Rollback Deployment
+**With CI/CD**:
 ```bash
-export ENVIRONMENT=production
+# Revert git commit
+git revert HEAD
+git push origin main
+
+# Or use specific image
+ssh -i ~/.ssh/key.pem ubuntu@<IP>
+docker pull <ECR>/<repo>:<old-commit-sha>
+docker-compose up -d
 ```
 
-Set the `DOMAIN`, by default `localhost` (for development), but when deploying you would use your own domain, for example:
-
+**Without CI/CD**:
 ```bash
-export DOMAIN=fastapi-project.example.com
+git checkout <previous-commit>
+# Restart services
 ```
 
-You can set several variables, like:
+## 🔒 Security Features
 
-* `PROJECT_NAME`: The name of the project, used in the API for the docs and emails.
-* `STACK_NAME`: The name of the stack used for Docker Compose labels and project name, this should be different for `staging`, `production`, etc. You could use the same domain replacing dots with dashes, e.g. `fastapi-project-example-com` and `staging-fastapi-project-example-com`.
-* `BACKEND_CORS_ORIGINS`: A list of allowed CORS origins separated by commas.
-* `SECRET_KEY`: The secret key for the FastAPI project, used to sign tokens.
-* `FIRST_SUPERUSER`: The email of the first superuser, this superuser will be the one that can create new users.
-* `FIRST_SUPERUSER_PASSWORD`: The password of the first superuser.
-* `SMTP_HOST`: The SMTP server host to send emails, this would come from your email provider (E.g. Mailgun, Sparkpost, Sendgrid, etc).
-* `SMTP_USER`: The SMTP server user to send emails.
-* `SMTP_PASSWORD`: The SMTP server password to send emails.
-* `EMAILS_FROM_EMAIL`: The email account to send emails from.
-* `POSTGRES_SERVER`: The hostname of the PostgreSQL server. You can leave the default of `db`, provided by the same Docker Compose. You normally wouldn't need to change this unless you are using a third-party provider.
-* `POSTGRES_PORT`: The port of the PostgreSQL server. You can leave the default. You normally wouldn't need to change this unless you are using a third-party provider.
-* `POSTGRES_PASSWORD`: The Postgres password.
-* `POSTGRES_USER`: The Postgres user, you can leave the default.
-* `POSTGRES_DB`: The database name to use for this application. You can leave the default of `app`.
-* `SENTRY_DSN`: The DSN for Sentry, if you are using it.
+✅ OIDC authentication (no AWS access keys)
+✅ Private ECR repositories
+✅ RDS in private subnet
+✅ SSM Session Manager (no SSH key storage)
+✅ Let's Encrypt SSL
+✅ Security groups (firewall)
+✅ IAM roles with least privilege
+✅ Image vulnerability scanning
 
-### Generate secret keys
+## 📊 Monitoring
 
-Some environment variables in the `.env` file have a default value of `changethis`.
-
-You have to change them with a secret key, to generate secret keys you can run the following command:
-
+### Application Health
 ```bash
-python -c "import secrets; print(secrets.token_urlsafe(32))"
+# Check services
+ssh -i ~/.ssh/key.pem ubuntu@<IP>
+app-status
+
+# Or with Docker
+docker ps
+docker stats
 ```
 
-Copy the content and use that as password / secret key. And run that again to generate another secure key.
+### AWS Console
+- **EC2**: Instance status, CPU, network
+- **RDS**: Database metrics, connections
+- **ECR**: Image vulnerabilities
+- **CloudWatch**: Basic metrics (free)
 
-### Deploy with Docker Compose
+## 🐛 Troubleshooting
 
-With the environment variables in place, you can deploy with Docker Compose:
-
+### Application not loading
 ```bash
-docker compose -f docker-compose.yml up -d
+# Check Nginx
+sudo systemctl status nginx
+sudo nginx -t
+
+# Check backend
+sudo systemctl status gamifying-education-backend
+
+# Check SSL
+sudo certbot certificates
 ```
 
-For production you wouldn't want to have the overrides in `docker-compose.override.yml`, that's why we explicitly specify `docker-compose.yml` as the file to use.
-
-## Continuous Deployment (CD)
-
-You can use GitHub Actions to deploy your project automatically. 😎
-
-You can have multiple environment deployments.
-
-There are already two environments configured, `staging` and `production`. 🚀
-
-### Prepare Server for SSH Deployment
-
-The deployment workflows use GitHub-hosted runners that deploy to your server via SSH.
-
-#### 1. Prepare Your Remote Server
-
-Ensure your server meets these requirements:
-
+### Database connection issues
 ```bash
-# Install Docker Engine (not Docker Desktop)
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Verify Docker installation
-docker --version
-docker compose version
-
-# Create deployment user
-sudo adduser github
-sudo usermod -aG docker github
-
-# Configure firewall (if using UFW)
-sudo ufw allow 22/tcp   # SSH
-sudo ufw allow 80/tcp   # HTTP
-sudo ufw allow 443/tcp  # HTTPS
+# Check RDS status in AWS console
+# Verify security group allows EC2 → RDS
+# Check environment variables
 ```
 
-#### 2. Set Up SSH Authentication
+### CI/CD deployment fails
+- Check GitHub Actions logs
+- Verify secrets are set correctly
+- Ensure Docker is installed on EC2
+- Check SSM agent is running
 
-Generate SSH key pair for GitHub Actions:
+**Full troubleshooting**: See respective documentation files
 
-```bash
-# On your local machine
-ssh-keygen -t ed25519 -C "github-actions" -f ~/.ssh/github-actions-deploy
+## 📁 Project Structure
 
-# Copy public key to server
-ssh-copy-id -i ~/.ssh/github-actions-deploy.pub github@your-server.example.com
-
-# Test connection
-ssh -i ~/.ssh/github-actions-deploy github@your-server.example.com
+```
+gamifying-education/
+├── .github/workflows/
+│   └── deploy.yml                # ✅ ACTIVE - OIDC deployment
+│
+├── terraform/                    # ✅ ACTIVE - Infrastructure
+│   ├── *.tf                      # Terraform configs
+│   ├── QUICK_START.md           # Quick deployment
+│   └── CI_CD_SETUP.md           # CI/CD setup
+│
+├── terraform-test/               # ✅ ACTIVE - Test deployment
+│   └── README.md
+│
+├── deployment-reference/         # ⚠️ REFERENCE ONLY
+│   ├── README.md                # Explanation
+│   └── deployment.md            # Old template guide
+│
+├── backend/
+│   └── Dockerfile               # ✅ ACTIVE - Backend image
+│
+├── frontend/
+│   ├── Dockerfile.prod          # ✅ ACTIVE - Frontend image
+│   └── nginx.conf               # Nginx config
+│
+├── docker-compose.prod.yml      # ✅ ACTIVE - Production
+├── DEPLOYMENT.md                # ✅ THIS FILE
+├── DEPLOYMENT_SUMMARY.md        # Overview
+├── CI_CD_README.md              # CI/CD quick ref
+└── my-deployment.md             # Architecture details
 ```
 
-#### 3. Prepare Deployment Directory
+## 🔄 Alternative Deployment (Reference Only)
 
-On your server:
+The original FastAPI template had a **Traefik-based deployment** with SSH.
 
-```bash
-# For production
-mkdir -p /home/github/gamifying-education
-chown github:github /home/github/gamifying-education
+**This is NOT used** but kept for reference in `deployment-reference/`.
 
-# For staging (if using separate environment)
-mkdir -p /home/github/gamifying-education-staging
-chown github:github /home/github/gamifying-education-staging
-```
+See `deployment-reference/README.md` for differences.
 
-### Set Secrets
+## 🎓 Learning Resources
 
-On your repository, configure secrets for the environment variables you need, the same ones described above, including `SECRET_KEY`, etc. Follow the [official GitHub guide for setting repository secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#creating-secrets-for-a-repository).
+- **New to Terraform?** Start with `terraform-test/README.md`
+- **New to AWS?** Read `DEPLOYMENT_SUMMARY.md`
+- **New to Docker?** Check `docker-compose.prod.yml`
+- **Want CI/CD?** Read `CI_CD_README.md`
 
-The current Github Actions workflows expect these secrets:
+## 🆘 Getting Help
 
-**Required for Production**:
-* `PRODUCTION_HOST` - Production server IP or hostname
-* `PRODUCTION_USER` - SSH username for production (e.g., `github`)
-* `PRODUCTION_SSH_KEY` - Contents of private SSH key for production
-* `DOMAIN_PRODUCTION` - Production domain (e.g., `example.com`)
-* `STACK_NAME_PRODUCTION` - Docker Compose project name (e.g., `gamifying-education-prod`)
+1. Check the relevant documentation file
+2. Look at troubleshooting sections
+3. Review error messages carefully
+4. Check AWS CloudWatch logs
 
-**Required for Staging** (if using):
-* `STAGING_HOST` - Staging server IP or hostname
-* `STAGING_USER` - SSH username for staging
-* `STAGING_SSH_KEY` - Contents of private SSH key for staging
-* `DOMAIN_STAGING` - Staging domain (e.g., `staging.example.com`)
-* `STACK_NAME_STAGING` - Docker Compose project name (e.g., `gamifying-education-staging`)
+## ✅ Deployment Checklist
 
-**Required for Both**:
-* `SECRET_KEY` - JWT signing key (generate with Python secrets)
-* `FIRST_SUPERUSER` - Admin email (e.g., `admin@example.com`)
-* `FIRST_SUPERUSER_PASSWORD` - Admin password (generate with Python secrets)
-* `POSTGRES_PASSWORD` - Database password (generate with Python secrets)
-* `OPENAI_API_KEY` - OpenAI API key for AI question generation (get from https://platform.openai.com/api-keys)
-* `EMAILS_FROM_EMAIL` - Email sender address (e.g., `noreply@example.com`)
+**Initial Setup**:
+- [ ] AWS account created
+- [ ] AWS CLI configured
+- [ ] Terraform installed
+- [ ] Domain configured in Route 53
+- [ ] OpenAI API key obtained
+- [ ] SSH key created in AWS
 
-**Optional**:
-* `SMTP_HOST` - SMTP server (e.g., `smtp.gmail.com`)
-* `SMTP_USER` - SMTP username
-* `SMTP_PASSWORD` - SMTP password
-* `SENTRY_DSN` - Sentry error tracking DSN
+**Test Deployment**:
+- [ ] terraform-test deployed successfully
+- [ ] Can SSH to test instance
+- [ ] Web page shows "Hello from Terraform"
+- [ ] terraform-test destroyed
 
-## GitHub Action Deployment Workflows
+**Production Deployment**:
+- [ ] terraform.tfvars configured
+- [ ] All passwords generated
+- [ ] terraform apply completed
+- [ ] Application accessible at https://devops-assignment.today
+- [ ] SSL certificate valid
+- [ ] Can login with admin credentials
+- [ ] Database connections working
 
-There are GitHub Action workflows in the `.github/workflows` directory configured for automated deployment:
+**CI/CD Setup** (Optional):
+- [ ] github_repo added to terraform.tfvars
+- [ ] GitHub secrets configured
+- [ ] Docker installed on EC2
+- [ ] SSM agent running
+- [ ] Test push deploys successfully
 
-* **`deploy-staging.yml`**: Deploys to staging environment on push to `master` branch
-* **`deploy-production.yml`**: Deploys to production environment on release publication
+## 🚀 Next Steps After Deployment
 
-### How It Works
+1. **Test the application** - Create questions, quizzes, play game
+2. **Set up monitoring** - AWS CloudWatch, billing alerts
+3. **Configure backups** - Verify RDS and S3 backups
+4. **Plan updates** - Decide on CI/CD or manual updates
+5. **Document customizations** - Track any changes you make
 
-1. **Build**: GitHub Actions builds Docker images on GitHub-hosted runners
-2. **Transfer**: Images are transferred to your server via SCP
-3. **Deploy**: Server loads images and starts services via SSH
-4. **Migrate**: Database migrations run automatically
+## 📞 Summary
 
-### Deploying to Staging
+**Quick deployment**: Follow `terraform/QUICK_START.md`
+**With CI/CD**: Add steps from `CI_CD_README.md`
+**Full details**: Read `DEPLOYMENT_SUMMARY.md`
 
-Simply push to the `master` branch:
+**Your app will be live at**: https://devops-assignment.today
 
-```bash
-git push origin master
-```
+---
 
-Watch the deployment in the Actions tab of your GitHub repository.
-
-### Deploying to Production
-
-Create and publish a release:
-
-1. Go to GitHub → Releases → Draft a new release
-2. Create a new tag (e.g., `v1.0.0`)
-3. Add release notes
-4. Click "Publish release"
-
-The deployment will start automatically.
-
-### Troubleshooting
-
-**View deployment logs**:
-- On GitHub: Actions tab → Click workflow run
-
-**On server**:
-```bash
-# View running containers
-docker compose --project-name gamifying-education-prod ps
-
-# View logs
-docker compose --project-name gamifying-education-prod logs -f
-
-# Check specific service
-docker compose --project-name gamifying-education-prod logs -f backend
-```
-
-**Common issues**:
-
-1. **SSH connection fails**: Verify SSH key is correct in GitHub secrets (must be private key, not public)
-2. **Docker Compose fails**: Manually test on server: `docker compose --project-name <stack-name> up -d`
-3. **Environment variables missing**: Verify all required secrets are set in GitHub repository settings
-
-## URLs
-
-Replace `fastapi-project.example.com` with your domain.
-
-### Main Traefik Dashboard
-
-Traefik UI: `https://traefik.fastapi-project.example.com`
-
-### Production
-
-Frontend: `https://dashboard.fastapi-project.example.com`
-
-Backend API docs: `https://api.fastapi-project.example.com/docs`
-
-Backend API base URL: `https://api.fastapi-project.example.com`
-
-Adminer: `https://adminer.fastapi-project.example.com`
-
-### Staging
-
-Frontend: `https://dashboard.staging.fastapi-project.example.com`
-
-Backend API docs: `https://api.staging.fastapi-project.example.com/docs`
-
-Backend API base URL: `https://api.staging.fastapi-project.example.com`
-
-Adminer: `https://adminer.staging.fastapi-project.example.com`
+**Status**: ✅ Modern OIDC deployment is ACTIVE
+**Template deployment**: ⚠️ Moved to `deployment-reference/` (not used)
