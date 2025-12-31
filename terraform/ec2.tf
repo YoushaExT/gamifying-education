@@ -57,8 +57,8 @@ resource "aws_instance" "main" {
     openai_api_key           = var.openai_api_key
     aws_region               = var.aws_region
     ecr_registry             = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
-    ecr_repository_backend   = aws_ecr_repository.backend.name
-    ecr_repository_frontend  = aws_ecr_repository.frontend.name
+    ecr_repository_backend   = data.aws_ecr_repository.backend.name
+    ecr_repository_frontend  = data.aws_ecr_repository.frontend.name
     hosted_zone_id           = var.route53_zone_id
   })
 

@@ -69,8 +69,8 @@ resource "aws_iam_role_policy" "ecr_policy" {
           "ecr:BatchGetImage"
         ]
         Resource = [
-          aws_ecr_repository.backend.arn,
-          aws_ecr_repository.frontend.arn
+          data.aws_ecr_repository.backend.arn,
+          data.aws_ecr_repository.frontend.arn
         ]
       }
     ]

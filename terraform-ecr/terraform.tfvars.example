@@ -1,0 +1,6 @@
+# Copy this file to terraform.tfvars and fill in your values
+# NEVER commit terraform.tfvars to git (it's in .gitignore)
+
+aws_region   = "us-east-1"
+aws_profile  = "personal-terraform" # Your AWS CLI profile name
+project_name = "gamifying-education"

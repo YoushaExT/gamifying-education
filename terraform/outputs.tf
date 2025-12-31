@@ -45,13 +45,13 @@ output "rds_username" {
 }
 
 output "ecr_repository_backend" {
-  description = "ECR repository URL for backend"
-  value       = aws_ecr_repository.backend.repository_url
+  description = "ECR repository URL for backend (managed in terraform-ecr)"
+  value       = data.aws_ecr_repository.backend.repository_url
 }
 
 output "ecr_repository_frontend" {
-  description = "ECR repository URL for frontend"
-  value       = aws_ecr_repository.frontend.repository_url
+  description = "ECR repository URL for frontend (managed in terraform-ecr)"
+  value       = data.aws_ecr_repository.frontend.repository_url
 }
 
 output "github_actions_role_arn" {

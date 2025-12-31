@@ -15,6 +15,28 @@ Simple checklist - only the essentials.
   aws configure --profile personal-terraform
   ```
 
+### ECR Setup (REQUIRED - Do This First!)
+
+**IMPORTANT**: ECR repositories must be deployed BEFORE main infrastructure!
+
+- [ ] Deploy ECR repositories:
+  ```bash
+  cd terraform-ecr
+  cp terraform.tfvars.example terraform.tfvars
+  vim terraform.tfvars  # Fill in: aws_region, aws_profile, project_name
+  terraform init
+  terraform apply
+  # Type: yes
+  ```
+
+- [ ] Verify ECR repos created:
+  ```bash
+  terraform output
+  # Should show backend and frontend repository URLs
+  ```
+
+**Note**: These repos persist even when you destroy the main infrastructure!
+
 ### Route53 Setup
 
 **Note**: Domain bought from AWS = hosted zone and nameservers already configured!

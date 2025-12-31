@@ -39,3 +39,12 @@ data "aws_caller_identity" "current" {}
 data "aws_route53_zone" "main" {
   zone_id = var.route53_zone_id
 }
+
+# Data sources for ECR repositories (managed in separate terraform-ecr project)
+data "aws_ecr_repository" "backend" {
+  name = var.ecr_backend_repository_name
+}
+
+data "aws_ecr_repository" "frontend" {
+  name = var.ecr_frontend_repository_name
+}

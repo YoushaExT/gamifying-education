@@ -119,3 +119,16 @@ variable "github_repo" {
   type        = string
   # Example: "yourusername/gamifying-education"
 }
+
+# ECR Configuration (repositories managed in separate terraform-ecr project)
+variable "ecr_backend_repository_name" {
+  description = "ECR repository name for backend (from terraform-ecr)"
+  type        = string
+  default     = "gamifying-education-backend"
+}
+
+variable "ecr_frontend_repository_name" {
+  description = "ECR repository name for frontend (from terraform-ecr)"
+  type        = string
+  default     = "gamifying-education-frontend"
+}

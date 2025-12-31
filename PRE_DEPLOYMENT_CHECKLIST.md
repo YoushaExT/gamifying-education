@@ -264,15 +264,81 @@ Test everything locally before deploying to AWS. Catch issues early!
 
 ---
 
-## 5. Main Terraform Project Validation
+## 5. ECR Terraform Project (Deploy First - One Time Only)
 
-### 5.1 Navigate to Main Terraform
+**IMPORTANT**: ECR repositories must be created BEFORE the main infrastructure so Docker images persist across destroy/apply cycles.
+
+### 5.1 Navigate to ECR Terraform
+- [ ] Go to terraform-ecr directory
+  ```bash
+  cd terraform-ecr
+  ```
+
+### 5.2 Setup ECR Configuration
+- [ ] Copy example file
+  ```bash
+  cp terraform.tfvars.example terraform.tfvars
+  ```
+
+- [ ] Fill in values (same as main terraform):
+  ```bash
+  vim terraform.tfvars
+  ```
+
+  Required:
+  - `aws_region` = "us-east-1"
+  - `aws_profile` = "personal-terraform"
+  - `project_name` = "gamifying-education"
+
+### 5.3 Initialize and Validate
+- [ ] Initialize terraform
+  ```bash
+  terraform init
+  ```
+
+- [ ] Validate configuration
+  ```bash
+  terraform validate
+  # Should succeed
+  ```
+
+- [ ] Format check
+  ```bash
+  terraform fmt -check
+  ```
+
+### 5.4 Deploy ECR Repositories
+- [ ] Run terraform plan
+  ```bash
+  terraform plan
+  # Should show 2 ECR repos + 2 lifecycle policies to create
+  ```
+
+- [ ] Apply to create ECR repositories
+  ```bash
+  terraform apply
+  # Type: yes
+  ```
+
+- [ ] Verify repositories created
+  ```bash
+  terraform output
+  # Should show backend and frontend repository URLs
+  ```
+
+**Note**: These ECR repos will persist even when you destroy the main infrastructure. Only destroy them when completely done with the project.
+
+---
+
+## 6. Main Terraform Project Validation
+
+### 6.1 Navigate to Main Terraform
 - [ ] Go to main terraform directory
   ```bash
   cd ../terraform
   ```
 
-### 5.2 Validate Configuration
+### 6.2 Validate Configuration
 - [x] Initialize (if not already done)
   ```bash
   terraform init
@@ -289,7 +355,7 @@ Test everything locally before deploying to AWS. Catch issues early!
   terraform fmt -check -recursive
   ```
 
-### 5.3 Create terraform.tfvars
+### 6.3 Create terraform.tfvars
 - [x] Copy example file
   ```bash
   cp terraform.tfvars.example terraform.tfvars
@@ -311,7 +377,7 @@ Test everything locally before deploying to AWS. Catch issues early!
   - `first_superuser_password` = "secure-password"
   - `openai_api_key` = "sk-..."
 
-### 5.4 Get Route53 Zone ID
+### 6.4 Get Route53 Zone ID
 - [x] List hosted zones
   ```bash
   aws route53 list-hosted-zones --profile personal-terraform
@@ -325,7 +391,7 @@ Test everything locally before deploying to AWS. Catch issues early!
 
 - [x] Update terraform.tfvars with zone ID
 
-### 5.5 Dry Run (Plan Only - Don't Apply Yet!)
+### 6.5 Dry Run (Plan Only - Don't Apply Yet!)
 - [x] Run terraform plan
   ```bash
   terraform plan
@@ -342,9 +408,9 @@ Test everything locally before deploying to AWS. Catch issues early!
 
 ---
 
-## 6. Local Development Stack Test
+## 7. Local Development Stack Test
 
-### 6.1 Test Full Stack Locally
+### 7.1 Test Full Stack Locally
 - [ ] Navigate to project root
   ```bash
   cd ~/IBA/fyp/gamifying-education
@@ -388,7 +454,7 @@ Test everything locally before deploying to AWS. Catch issues early!
   # Should load the app
   ```
 
-### 6.2 Cleanup Local Stack
+### 7.2 Cleanup Local Stack
 - [ ] Stop and remove containers
   ```bash
   docker compose down
@@ -401,9 +467,9 @@ Test everything locally before deploying to AWS. Catch issues early!
 
 ---
 
-## 7. Deployment Scripts Test
+## 8. Deployment Scripts Test
 
-### 7.1 Verify Scripts Exist
+### 8.1 Verify Scripts Exist
 - [ ] Check deploy script
   ```bash
   ls -l scripts/deploy.sh
@@ -416,7 +482,7 @@ Test everything locally before deploying to AWS. Catch issues early!
   # Should exist and be executable
   ```
 
-### 7.2 Test Scripts (Dry Run)
+### 8.2 Test Scripts (Dry Run)
 - [ ] Run deploy script in dry-run mode
   ```bash
   cd terraform
@@ -428,9 +494,9 @@ Test everything locally before deploying to AWS. Catch issues early!
 
 ---
 
-## 8. Final Pre-Deployment Checks
+## 9. Final Pre-Deployment Checks
 
-### 8.1 Documentation Review
+### 9.1 Documentation Review
 - [ ] Read SIMPLE_DEPLOYMENT.md
   ```bash
   cat SIMPLE_DEPLOYMENT.md
@@ -443,7 +509,7 @@ Test everything locally before deploying to AWS. Catch issues early!
 
 - [ ] Skim TERRAFORM_DEBUGGING.md (for when things go wrong)
 
-### 8.2 Cost Awareness
+### 9.2 Cost Awareness
 - [ ] Understand monthly costs:
   - EC2 (t3.medium): ~$30/month
   - RDS (db.t3.micro): ~$15/month
@@ -452,7 +518,7 @@ Test everything locally before deploying to AWS. Catch issues early!
 
 - [ ] Confirm you're OK with these costs
 
-### 8.3 Backup Plan
+### 9.3 Backup Plan
 - [ ] Confirm you can destroy infrastructure if needed
   ```bash
   # Just verify command, don't run!
@@ -467,13 +533,14 @@ Test everything locally before deploying to AWS. Catch issues early!
 
 ---
 
-## 9. Ready to Deploy?
+## 10. Ready to Deploy?
 
 ### Final Checklist
 - [ ] All tests above passed ✓
 - [ ] terraform-test worked successfully ✓
 - [ ] Docker builds work ✓
 - [ ] AWS credentials configured ✓
+- [ ] **ECR repositories deployed** (terraform-ecr) ✓
 - [ ] terraform.tfvars filled out ✓
 - [ ] Route53 zone ID obtained ✓
 - [ ] SSH key exists in AWS ✓

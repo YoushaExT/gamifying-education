@@ -8,6 +8,22 @@ Stop overthinking it. Here's what you actually need to do.
 
 ## One-Time Setup (Do Once, Never Again)
 
+### 0. Deploy ECR Repositories (FIRST!)
+
+**CRITICAL**: Do this BEFORE everything else!
+
+```bash
+cd terraform-ecr
+cp terraform.tfvars.example terraform.tfvars
+vim terraform.tfvars  # Fill in: aws_region, aws_profile, project_name
+terraform init
+terraform apply
+```
+
+**These repos persist even when you destroy the main infrastructure!**
+
+---
+
 ### 1. Get Route53 Hosted Zone ID
 
 **Note**: Since your domain was bought from AWS, the hosted zone and nameservers are already configured!
