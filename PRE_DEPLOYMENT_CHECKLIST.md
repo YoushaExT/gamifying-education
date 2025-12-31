@@ -291,36 +291,36 @@ Test everything locally before deploying to AWS. Catch issues early!
   - `project_name` = "gamifying-education"
 
 ### 5.3 Initialize and Validate
-- [ ] Initialize terraform
+- [x] Initialize terraform
   ```bash
   terraform init
   ```
 
-- [ ] Validate configuration
+- [x] Validate configuration
   ```bash
   terraform validate
   # Should succeed
   ```
 
-- [ ] Format check
+- [x] Format check
   ```bash
   terraform fmt -check
   ```
 
 ### 5.4 Deploy ECR Repositories
-- [ ] Run terraform plan
+- [x] Run terraform plan
   ```bash
   terraform plan
   # Should show 2 ECR repos + 2 lifecycle policies to create
   ```
 
-- [ ] Apply to create ECR repositories
+- [x] Apply to create ECR repositories
   ```bash
   terraform apply
   # Type: yes
   ```
 
-- [ ] Verify repositories created
+- [x] Verify repositories created
   ```bash
   terraform output
   # Should show backend and frontend repository URLs
@@ -333,7 +333,7 @@ Test everything locally before deploying to AWS. Catch issues early!
 ## 6. Main Terraform Project Validation
 
 ### 6.1 Navigate to Main Terraform
-- [ ] Go to main terraform directory
+- [x] Go to main terraform directory
   ```bash
   cd ../terraform
   ```
@@ -344,13 +344,13 @@ Test everything locally before deploying to AWS. Catch issues early!
   terraform init
   ```
 
-- [x] Validate syntax
+- [ ] Validate syntax
   ```bash
   terraform validate
   # Should succeed
   ```
 
-- [x] Format check
+- [ ] Format check
   ```bash
   terraform fmt -check -recursive
   ```
@@ -392,7 +392,7 @@ Test everything locally before deploying to AWS. Catch issues early!
 - [x] Update terraform.tfvars with zone ID
 
 ### 6.5 Dry Run (Plan Only - Don't Apply Yet!)
-- [x] Run terraform plan
+- [ ] Run terraform plan
   ```bash
   terraform plan
   # Review what will be created
