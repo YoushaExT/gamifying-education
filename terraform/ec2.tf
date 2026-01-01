@@ -59,6 +59,7 @@ resource "aws_instance" "main" {
     ecr_registry             = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
     ecr_repository_backend   = data.aws_ecr_repository.backend.name
     ecr_repository_frontend  = data.aws_ecr_repository.frontend.name
+    s3_media_bucket          = data.aws_s3_bucket.media.id
     hosted_zone_id           = var.route53_zone_id
     github_repo_url          = var.github_repo_url
     github_token             = var.github_token

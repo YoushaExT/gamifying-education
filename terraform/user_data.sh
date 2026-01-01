@@ -170,6 +170,11 @@ ADMIN_EMAIL=${admin_email}
 # Credentials automatically provided by EC2 instance IAM role
 AWS_REGION=${aws_region}
 AWS_HOSTED_ZONE_ID=${hosted_zone_id}
+
+# Media storage configuration (S3)
+# Credentials automatically provided by EC2 instance IAM role
+MEDIA_STORAGE_BACKEND=s3
+AWS_S3_MEDIA_BUCKET=${s3_media_bucket}
 EOF
 
 # Fix ownership again

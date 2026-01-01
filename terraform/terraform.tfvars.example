@@ -46,3 +46,12 @@ github_repo = "YoushaExT/gamifying-education"  # Your GitHub repo in format "own
 # Required scopes: repo (full control of private repositories)
 # Leave empty if repository is public
 github_token = ""  # Your GitHub personal access token (keep private!)
+
+# ECR Configuration (Optional - uses defaults from terraform-ecr)
+# Only override if you used different names when creating ECR repositories
+# ecr_backend_repository_name  = "gamifying-education-backend"
+# ecr_frontend_repository_name = "gamifying-education-frontend"
+
+# S3 Configuration (Optional - uses default from terraform-s3)
+# Only override if you used a different bucket name when creating S3 bucket
+# s3_media_bucket_name = "gamifying-education-production-media"

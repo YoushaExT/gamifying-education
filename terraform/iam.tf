@@ -78,6 +78,34 @@ resource "aws_iam_role_policy" "ecr_policy" {
   })
 }
 
+# Policy for S3 media storage access
+resource "aws_iam_role_policy" "s3_media_policy" {
+  name = "${var.project_name}-s3-media-policy"
+  role = aws_iam_role.ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "${data.aws_s3_bucket.media.arn}/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = data.aws_s3_bucket.media.arn
+      }
+    ]
+  })
+}
+
 # Policy for SSM Session Manager (for deployments)
 resource "aws_iam_role_policy_attachment" "ssm_policy" {
   role       = aws_iam_role.ec2_role.name

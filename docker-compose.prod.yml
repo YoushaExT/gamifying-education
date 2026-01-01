@@ -66,6 +66,11 @@ services:
     networks:
       - traefik-public
       - backend-network
+    environment:
+      # Media storage configuration
+      - MEDIA_STORAGE_BACKEND=${MEDIA_STORAGE_BACKEND:-s3}
+      - AWS_S3_MEDIA_BUCKET=${AWS_S3_MEDIA_BUCKET}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/utils/health-check/"]
       interval: 30s

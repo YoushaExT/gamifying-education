@@ -107,6 +107,12 @@ class Settings(BaseSettings):
     # Feature Flags (defaults, can be overridden in database)
     FEATURE_AI_QUESTION_GENERATION: bool = True
 
+    # Media Storage Settings
+    MEDIA_STORAGE_BACKEND: Literal["local", "s3"] = "local"
+    MEDIA_LOCAL_PATH: str = "/app/media"
+    AWS_S3_MEDIA_BUCKET: str | None = None
+    AWS_REGION: str = "us-east-1"
+
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":
             message = (

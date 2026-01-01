@@ -1,22 +1,19 @@
 """API routes for media file uploads."""
 
 import logging
-import os
-import shutil
 import uuid
 from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
 
 from app.api.deps import CurrentUser
+from app.services.media_storage import get_storage
 
 router = APIRouter(prefix="/media", tags=["media"])
 logger = logging.getLogger(__name__)
 
-# Media directory configuration
-MEDIA_DIR = Path("/app/media")  # Docker volume mount path
+# File validation configuration
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
@@ -56,9 +53,9 @@ async def upload_image(
         )
 
     # Validate file size
-    file.file.seek(0, os.SEEK_END)
+    file.file.seek(0, 2)  # Seek to end
     size = file.file.tell()
-    file.file.seek(0)
+    file.file.seek(0)  # Reset to beginning
 
     if size > MAX_FILE_SIZE:
         raise HTTPException(
@@ -70,21 +67,17 @@ async def upload_image(
         # Generate unique filename
         file_id = uuid.uuid4()
         filename = f"{file_id}{ext}"
-        filepath = MEDIA_DIR / filename
 
-        # Ensure media directory exists
-        MEDIA_DIR.mkdir(parents=True, exist_ok=True)
-
-        # Save file
-        with filepath.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        # Get storage backend and upload
+        storage = get_storage()
+        url = await storage.upload(file, filename)
 
         logger.info(
             f"Image uploaded by user {current_user.id}: {filename} ({size} bytes)"
         )
 
         # Return URL
-        return {"url": f"/api/v1/media/{filename}"}
+        return {"url": url}
 
     except Exception as e:
         logger.error(f"Failed to upload image: {e}", exc_info=True)
@@ -99,7 +92,7 @@ async def get_image(filename: str) -> Any:
         filename: Name of the image file
 
     Returns:
-        FileResponse with the image
+        FileResponse or StreamingResponse with the image
 
     Raises:
         HTTPException: If image not found
@@ -108,13 +101,14 @@ async def get_image(filename: str) -> Any:
     if not filename or ".." in filename or "/" in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    filepath = MEDIA_DIR / filename
-
-    if not filepath.exists() or not filepath.is_file():
+    try:
+        storage = get_storage()
+        return await storage.get(filename)
+    except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Image not found")
-
-    # Return image file
-    return FileResponse(filepath)
+    except Exception as e:
+        logger.error(f"Failed to retrieve image: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve image")
 
 
 @router.delete("/{filename}")
@@ -145,15 +139,13 @@ async def delete_image(
     if not filename or ".." in filename or "/" in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    filepath = MEDIA_DIR / filename
-
-    if not filepath.exists() or not filepath.is_file():
-        raise HTTPException(status_code=404, detail="Image not found")
-
     try:
-        filepath.unlink()
+        storage = get_storage()
+        await storage.delete(filename)
         logger.info(f"Image deleted by user {current_user.id}: {filename}")
         return {"message": "Image deleted successfully"}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Image not found")
     except Exception as e:
         logger.error(f"Failed to delete image: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete image")
