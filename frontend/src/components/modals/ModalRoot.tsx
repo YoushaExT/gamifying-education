@@ -72,6 +72,7 @@ export function ModalRoot() {
             modalContent={modalContent}
             modalProps={{ ...modalProps, id }}
             showCloseButton={showCloseButton}
+            className={modalProps?.className as string}
           />
         )
       })}

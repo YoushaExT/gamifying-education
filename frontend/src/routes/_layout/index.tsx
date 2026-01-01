@@ -59,7 +59,7 @@ function Dashboard() {
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
           <div className="text-center space-y-4">
             <h1 className="text-4xl font-bold">Gamifying Education</h1>
-            <h1 className="text-4xl font-bold">Pipeline version test: 1.01</h1>
+            <h1 className="text-4xl font-bold">Pipeline version test: 1.02</h1>
             <p className="text-muted-foreground text-lg">
               Challenge a friend in a multiplayer quiz battle
             </p>
@@ -101,7 +101,9 @@ function Dashboard() {
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor={roomCodeInputId}>Room Code</Label>
+                    <Label htmlFor={roomCodeInputId} className="mb-3">
+                      Room Code
+                    </Label>
                     <Input
                       id={roomCodeInputId}
                       placeholder="ABC123"

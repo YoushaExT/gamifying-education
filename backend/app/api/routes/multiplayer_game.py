@@ -836,7 +836,7 @@ async def handle_play_card(
     game_id_str: str,
     user_id: str,
     card_index: int,
-    selected_answers: list[str],
+    selected_answers: list[int],
     websocket: WebSocket,
 ) -> None:
     """Handle play card event via WebSocket."""

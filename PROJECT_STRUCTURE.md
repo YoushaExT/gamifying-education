@@ -22,6 +22,7 @@
 - **[Tenacity](https://tenacity.readthedocs.io/)** - Retry logic
 - **[Bleach](https://bleach.readthedocs.io/)** - HTML sanitization
 - **[PyYAML](https://pyyaml.org/)** - Card template parsing
+- **[boto3](https://boto3.amazonaws.com/v1/documentation/api/latest/index.html)** - AWS SDK (S3 media storage)
 - **[uv](https://docs.astral.sh/uv/)** - Package manager
 - Python >=3.10, <4.0
 
@@ -57,6 +58,7 @@
 │   │   │   ├── question_generation.py
 │   │   │   ├── quizzes.py
 │   │   │   ├── multiplayer_game.py
+│   │   │   ├── media.py           # Image upload/download
 │   │   │   └── feature_flags.py
 │   │   ├── core/                 # Config, DB, security
 │   │   ├── services/             # Business logic
@@ -64,6 +66,7 @@
 │   │   │   ├── card_template_service.py  # Card/deck templates
 │   │   │   ├── question_generator.py     # AI generation
 │   │   │   ├── diversity_analyzer.py     # Question diversity
+│   │   │   ├── media_storage.py          # Storage abstraction (local/S3)
 │   │   │   └── feature_flags.py
 │   │   ├── card_templates/       # YAML card definitions
 │   │   │   └── default_deck.yml
@@ -139,6 +142,9 @@
 ├── scripts/
 │   ├── generate-client.sh        # Regenerate API client
 │   └── test.sh
+├── terraform-ecr/                 # ECR repos (long-lived)
+├── terraform-s3/                  # S3 media bucket (long-lived)
+├── terraform/                     # Main infrastructure
 ├── docker-compose.yml
 └── docker-compose.override.yml
 ```
@@ -282,7 +288,7 @@ POSTGRES_PASSWORD=changethis
 
 # AI Generation
 OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4o-mini
+OPENAI_MODEL=gpt-5-mini-2025-08-07
 GENERATION_TEMPERATURE=0.7
 
 # Feature Flags
@@ -815,6 +821,16 @@ WS   /api/v1/multiplayer/games/{game_id}/ws
 - `resolve_answer()` - Apply effect based on correctness
 - `end_turn()` - Switch turns, draw, apply fatigue
 - `check_game_over()` - Determine winner
+
+**MediaStorage** (Storage abstraction):
+- Abstract base class defining storage interface
+- `LocalStorage`: Stores files in `/app/media` directory (development)
+- `S3Storage`: Stores files in AWS S3 bucket (production)
+- `get_storage()`: Factory function that returns appropriate backend based on `MEDIA_STORAGE_BACKEND` env var
+- Supports upload, download, delete, and exists operations
+- LocalStorage: Bind-mounted directory, files visible on host
+- S3Storage: IAM role authentication, versioning enabled, lifecycle rules for cost optimization
+- Deployment: See `other-deployment-docs/media-storage.md`
 
 ### Frontend Components
 

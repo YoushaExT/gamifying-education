@@ -48,3 +48,8 @@ data "aws_ecr_repository" "backend" {
 data "aws_ecr_repository" "frontend" {
   name = var.ecr_frontend_repository_name
 }
+
+# Data source for S3 media bucket (managed in separate terraform-s3 project)
+data "aws_s3_bucket" "media" {
+  bucket = var.s3_media_bucket_name
+}

@@ -1,3 +1,7 @@
+[31 december]
+- Deployment
+    - AWS using terraform
+    - CI/CD using github actions
 [30 december]
 - Generate styling improvements
     - added hobbit background

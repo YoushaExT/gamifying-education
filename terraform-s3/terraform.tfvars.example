@@ -1,0 +1,6 @@
+# Copy this file to terraform.tfvars and fill in your values
+
+aws_region   = "us-east-1"
+aws_profile  = "personal-terraform" # AWS CLI profile name
+project_name = "gamifying-education"
+environment  = "production"

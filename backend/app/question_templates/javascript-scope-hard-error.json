@@ -1,0 +1,77 @@
+{
+  "subject": "JavaScript",
+  "topic": "Scope",
+  "difficulty": "hard",
+  "template_prompt": "Generate a hard multiple-choice question about {topic} in {subject}. Show buggy or tricky code and ask what error occurs or why something doesn't work as expected. Test advanced understanding of scope-related edge cases, temporal dead zone, hoisting gotchas, or closure pitfalls. DO NOT include 'A.', 'B.', 'C.', 'D.' labels in choices - use plain text only. Indicate correct answers by INDEX (0, 1, 2, or 3). Format the question text as HTML with proper <pre><code class=\"language-javascript\"> tags for code. Code should be non-trivial and test edge cases.",
+  "example_questions": [
+    {
+      "question_text": "<p>What error will occur when running this code?</p><pre><code class=\"language-javascript\">function test() {\n  console.log(value);\n  let value = 5;\n}\n\ntest();</code></pre>",
+      "choices": [
+        "SyntaxError",
+        "ReferenceError: Cannot access 'value' before initialization",
+        "undefined will be logged",
+        "TypeError"
+      ],
+      "correct_answers": [1],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "explanation": "This demonstrates the Temporal Dead Zone (TDZ). Variables declared with let are hoisted but not initialized, causing a ReferenceError if accessed before declaration."
+    },
+    {
+      "question_text": "<p>Why does the following code produce unexpected results?</p><pre><code class=\"language-javascript\">for (var i = 0; i < 3; i++) {\n  setTimeout(function() {\n    console.log(i);\n  }, 1000);\n}</code></pre><p>The output is <code>3 3 3</code> instead of <code>0 1 2</code>. What is the reason?</p>",
+      "choices": [
+        "setTimeout doesn't work inside loops",
+        "var is function-scoped, so all callbacks share the same i variable which has value 3 when they execute",
+        "The loop executes too fast",
+        "console.log is called before the loop finishes"
+      ],
+      "correct_answers": [1],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "explanation": "Because var is function-scoped (not block-scoped), there's only one i variable shared by all setTimeout callbacks. By the time the callbacks execute, the loop has finished and i is 3."
+    },
+    {
+      "question_text": "<p>What problem does this code have?</p><pre><code class=\"language-javascript\">function createCounter() {\n  let count = 0;\n  return {\n    increment: function() { count++; },\n    getCount: function() { return count; }\n  };\n}\n\nlet counter1 = createCounter();\nlet counter2 = createCounter();\ncounter1.increment();\ncounter1.increment();\ncounter2.increment();\n\nconsole.log(counter1.getCount());</code></pre><p>What will be logged?</p>",
+      "choices": [
+        "3 (counters share state)",
+        "1 (only last increment counts)",
+        "2 (each counter has independent state)",
+        "ReferenceError (count is not accessible)"
+      ],
+      "correct_answers": [2],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "explanation": "This is actually correct closure behavior - each call to createCounter() creates a new scope with its own count variable. The question tests understanding that closures create independent state, not shared state."
+    },
+    {
+      "question_text": "<p>What issues can occur with this code pattern?</p><pre><code class=\"language-javascript\">const obj = {\n  value: 10,\n  getValue: function() {\n    return function() {\n      return this.value;\n    };\n  }\n};\n\nconst fn = obj.getValue();\nconsole.log(fn());</code></pre>",
+      "choices": [
+        "Logs 10 correctly",
+        "Logs undefined because inner function loses 'this' context",
+        "Throws TypeError",
+        "Logs null"
+      ],
+      "correct_answers": [1],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "explanation": "The inner function doesn't inherit 'this' from the outer function. When fn() is called, 'this' is undefined (or global object), not the obj, so this.value is undefined."
+    }
+  ],
+  "constraints": {
+    "require_code": true,
+    "code_language": "javascript",
+    "max_question_length": 700,
+    "min_code_lines": 4,
+    "include_explanation": false,
+    "no_labels_in_choices": true,
+    "use_index_for_answers": true
+  }
+}

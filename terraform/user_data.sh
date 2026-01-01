@@ -132,7 +132,7 @@ FIRST_SUPERUSER_PASSWORD=${first_superuser_password}
 
 # OpenAI
 OPENAI_API_KEY=${openai_api_key}
-OPENAI_MODEL=gpt-4o-mini
+OPENAI_MODEL=gpt-5-mini-2025-08-07
 GENERATION_TEMPERATURE=0.7
 
 # CORS (allow your domain)
@@ -170,6 +170,11 @@ ADMIN_EMAIL=${admin_email}
 # Credentials automatically provided by EC2 instance IAM role
 AWS_REGION=${aws_region}
 AWS_HOSTED_ZONE_ID=${hosted_zone_id}
+
+# Media storage configuration (S3)
+# Credentials automatically provided by EC2 instance IAM role
+MEDIA_STORAGE_BACKEND=s3
+AWS_S3_MEDIA_BUCKET=${s3_media_bucket}
 EOF
 
 # Fix ownership again

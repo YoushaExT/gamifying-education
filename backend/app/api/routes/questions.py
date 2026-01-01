@@ -37,6 +37,8 @@ def question_to_public(question: Question, session: SessionDep) -> QuestionPubli
         question_text=question.question_text,
         choices=question.choices,
         correct_answers=question.correct_answers,
+        difficulty=question.difficulty,
+        question_type=question.question_type,
         subject=question.subject_rel.name if question.subject_rel else "",
         topic=question.topic_rel.name if question.topic_rel else None,
         subject_id=question.subject_id,

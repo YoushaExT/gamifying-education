@@ -2,10 +2,12 @@ import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight"
 import Mathematics from "@tiptap/extension-mathematics"
+import Image from "@tiptap/extension-image"
 import { common, createLowlight } from "lowlight"
-import { Bold, Italic, Code, Braces, ListOrdered, List, Sigma } from "lucide-react"
-import { useEffect, useState, useRef } from "react"
+import { Bold, Italic, Code, Braces, ListOrdered, List, Sigma, ImageIcon } from "lucide-react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import katex from "katex"
+import { MediaService } from "@/client"
 import {
   Dialog,
   DialogContent,
@@ -36,7 +38,9 @@ export function RichTextEditor({
   const [showMathDialog, setShowMathDialog] = useState(false)
   const [mathInput, setMathInput] = useState("")
   const [isInlineMath, setIsInlineMath] = useState(true)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const editorContainerRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const editor = useEditor({
     extensions: [
@@ -48,6 +52,10 @@ export function RichTextEditor({
         defaultLanguage: "javascript",
       }),
       Mathematics,
+      Image.configure({
+        inline: true,
+        allowBase64: false, // Use URLs only
+      }),
     ],
     content: value,
     onUpdate: ({ editor }) => {
@@ -57,8 +65,79 @@ export function RichTextEditor({
       attributes: {
         class: "prose prose-sm max-w-none p-4 min-h-[200px] focus:outline-none",
       },
+      handlePaste: (_view, event) => {
+        // Handle image paste from clipboard
+        const items = event.clipboardData?.items
+        if (!items) return false
+
+        for (const item of Array.from(items)) {
+          if (item.type.indexOf("image") === 0) {
+            event.preventDefault()
+            const file = item.getAsFile()
+            if (file) {
+              // Use setTimeout to avoid setState during render
+              setTimeout(() => handleImageUpload(file), 0)
+            }
+            return true
+          }
+        }
+        return false
+      },
     },
   })
+
+  // Handle image upload
+  const handleImageUpload = useCallback(async (file: File) => {
+    if (!editor) return
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file")
+      return
+    }
+
+    // Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024
+    if (file.size > maxSize) {
+      alert("Image file size must be less than 5MB")
+      return
+    }
+
+    setIsUploadingImage(true)
+
+    try {
+      // Upload image using generated client
+      const response = await MediaService.uploadImage({
+        formData: { file },
+      })
+
+      // Convert relative URL to absolute URL
+      const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
+      const imageUrl = response.url.startsWith("http")
+        ? response.url
+        : `${baseUrl}${response.url}`
+
+      // Insert image into editor
+      editor.chain().focus().setImage({ src: imageUrl }).run()
+    } catch (error) {
+      console.error("Failed to upload image:", error)
+      alert("Failed to upload image. Please try again.")
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }, [editor])
+
+  // Handle file input change
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      handleImageUpload(file)
+    }
+    // Reset input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
 
   // Update editor content when value changes externally
   useEffect(() => {
@@ -250,6 +329,18 @@ export function RichTextEditor({
           <Sigma className="h-4 w-4" />
         </ToolbarButton>
 
+        <ToolbarButton
+          onClick={() => fileInputRef.current?.click()}
+          active={false}
+          title="Upload Image"
+        >
+          {isUploadingImage ? (
+            <span className="text-xs">...</span>
+          ) : (
+            <ImageIcon className="h-4 w-4" />
+          )}
+        </ToolbarButton>
+
         {/* Language selector - only show when code block is active */}
         {editor.isActive("codeBlock") && (
           <>
@@ -271,6 +362,15 @@ export function RichTextEditor({
           </>
         )}
       </div>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileInputChange}
+        className="hidden"
+      />
 
       {/* Editor Content */}
       <EditorContent editor={editor} placeholder={placeholder} />

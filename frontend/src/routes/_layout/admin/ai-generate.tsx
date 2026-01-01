@@ -2,7 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { CheckCircle2, Loader2, Sparkles } from "lucide-react"
 import { useState } from "react"
-import { QuestionGenerationService, QuestionTemplatesService } from "@/client"
+import {
+  type QuestionGenerationApproveGeneratedQuestionData,
+  type QuestionGenerationRejectGeneratedQuestionData,
+  QuestionGenerationService,
+  QuestionTemplatesService,
+} from "@/client"
 import {
   type GeneratedQuestionData,
   GeneratedQuestionPreview,
@@ -55,8 +60,14 @@ function AIGeneratePage() {
           }
           // Topic provided but no match found -> create new template
         } else {
-          // No topic provided, return first matching subject template
-          return templates.data[0].id
+          // No topic provided, look for template with no topic (null or empty)
+          const matchingTemplate = templates.data.find(
+            (t) => !t.topic || t.topic === "",
+          )
+          if (matchingTemplate) {
+            return matchingTemplate.id
+          }
+          // No template without topic found -> create new template
         }
       }
 
@@ -66,7 +77,7 @@ function AIGeneratePage() {
           subject,
           topic: topic || null,
           difficulty: "medium",
-          template_prompt: `Generate a multiple-choice question about ${topic || subject} in ${subject}. The question should test understanding of key concepts. Provide 4 choices (A, B, C, D) with exactly one correct answer. Format the question text as HTML with proper tags for code or equations if needed.`,
+          template_prompt: `Generate a multiple-choice question about ${topic || subject}. The question should test understanding of key concepts. Provide 4 choices (A, B, C, D) with exactly one correct answer. Format the question text as HTML with proper tags for code or equations if needed.`,
           example_questions: [],
           constraints: {},
           is_active: true,
@@ -97,7 +108,7 @@ function AIGeneratePage() {
             template_id: templateId,
             num_questions: formData.num_questions,
             skip_content_validation: formData.skip_content_validation,
-            temperature: formData.temperature,
+            custom_prompt: formData.custom_prompt || undefined,
           },
         })
 
@@ -143,12 +154,12 @@ function AIGeneratePage() {
 
   // Accept question mutation
   const acceptMutation = useMutation({
-    mutationFn: async (questionId: string) => {
-      return await QuestionGenerationService.approveGeneratedQuestion({
-        questionId,
-      })
+    mutationFn: async (
+      data: QuestionGenerationApproveGeneratedQuestionData,
+    ) => {
+      return await QuestionGenerationService.approveGeneratedQuestion(data)
     },
-    onSuccess: (_, questionId) => {
+    onSuccess: (_, { questionId }) => {
       toast({
         title: "Question accepted",
         description: "Question has been added to the question bank.",
@@ -171,17 +182,8 @@ function AIGeneratePage() {
 
   // Reject question mutation
   const rejectMutation = useMutation({
-    mutationFn: async ({
-      questionId,
-      reason,
-    }: {
-      questionId: string
-      reason: string
-    }) => {
-      return await QuestionGenerationService.rejectGeneratedQuestion({
-        questionId,
-        requestBody: { reason },
-      })
+    mutationFn: async (data: QuestionGenerationRejectGeneratedQuestionData) => {
+      return await QuestionGenerationService.rejectGeneratedQuestion(data)
     },
     onSuccess: (_, { questionId }) => {
       toast({
@@ -205,12 +207,24 @@ function AIGeneratePage() {
     generateMutation.mutate(formData)
   }
 
-  const handleAccept = async (questionId: string) => {
-    await acceptMutation.mutateAsync(questionId)
+  const handleAccept = async (
+    questionId: QuestionGenerationApproveGeneratedQuestionData["questionId"],
+    modifiedData?: QuestionGenerationApproveGeneratedQuestionData["requestBody"],
+  ) => {
+    await acceptMutation.mutateAsync({
+      questionId,
+      requestBody: modifiedData,
+    })
   }
 
-  const handleReject = async (questionId: string, reason: string) => {
-    await rejectMutation.mutateAsync({ questionId, reason })
+  const handleReject = async (
+    questionId: QuestionGenerationRejectGeneratedQuestionData["questionId"],
+    reason: QuestionGenerationRejectGeneratedQuestionData["requestBody"]["reason"],
+  ) => {
+    await rejectMutation.mutateAsync({
+      questionId,
+      requestBody: { reason },
+    })
   }
 
   return (

@@ -222,7 +222,7 @@ from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 class OpenAIProvider(LLMProvider):
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+    def __init__(self, api_key: str, model: str = "gpt-5-mini-2025-08-07"):
         self.client = OpenAI(api_key=api_key)
         self.model = model
     
@@ -1162,8 +1162,8 @@ OPENAI_API_KEY=sk-...                          # Already present
 QUESTION_GENERATION_ENABLED=true               # Feature flag
 CONTENT_VALIDATION_THRESHOLD=70                # Min score for auto-approval
 MAX_GENERATION_BATCH_SIZE=20                   # Max questions per request
-OPENAI_MODEL=gpt-4o-mini                       # Model for generation
-VALIDATION_MODEL=gpt-4o-mini                   # Model for validation
+OPENAI_MODEL=gpt-5-mini-2025-08-07                       # Model for generation
+VALIDATION_MODEL=gpt-5-mini-2025-08-07                   # Model for validation
 GENERATION_TEMPERATURE=0.7                     # Creativity level (0.0-1.0)
 GENERATION_RATE_LIMIT=50                       # Max requests per minute
 ```
@@ -1181,8 +1181,8 @@ class Settings(BaseSettings):
     question_generation_enabled: bool = True
     content_validation_threshold: int = 70
     max_generation_batch_size: int = 20
-    openai_model: str = "gpt-4o-mini"
-    validation_model: str = "gpt-4o-mini"
+    openai_model: str = "gpt-5-mini-2025-08-07"
+    validation_model: str = "gpt-5-mini-2025-08-07"
     generation_temperature: float = 0.7
     generation_rate_limit: int = 50
 ```

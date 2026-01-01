@@ -1,10 +1,20 @@
+import { closestCenter, DndContext, type DragEndEvent } from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useId, useState } from "react"
-import { type SubmitHandler, useForm } from "react-hook-form"
+import { Controller, type SubmitHandler, useForm } from "react-hook-form"
+import { z } from "zod"
 
 import {
+  type QuestionDifficulty,
   type QuestionPublic,
   QuestionsService,
+  type QuestionType,
   type QuestionUpdate,
   SubjectsService,
   TopicsService,
@@ -13,7 +23,6 @@ import type { ApiError } from "@/client/core/ApiError"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { Button } from "../ui/button"
-import { Checkbox } from "../ui/checkbox"
 import { Combobox } from "../ui/combobox"
 import {
   Dialog,
@@ -24,23 +33,52 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../ui/dialog"
-import { Input } from "../ui/input"
 import { Label } from "../ui/label"
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group"
 import { RichTextEditor } from "../ui/rich-text-editor"
+import { DraggableChoice } from "./DraggableChoice"
 
-interface QuestionFormData {
-  question_text: string
-  choice_a: string
-  choice_b: string
-  choice_c: string
-  choice_d: string
-  correct_a: boolean
-  correct_b: boolean
-  correct_c: boolean
-  correct_d: boolean
-  subject: string
-  topic?: string
-}
+// Internal form type (includes id for drag-drop)
+const choiceItemSchema = z.object({
+  id: z.string(),
+  text: z.string().min(1, "Choice text is required"),
+})
+
+// Form schema based on backend types
+const questionFormSchema = z
+  .object({
+    question_text: z.string().min(1, "Question text is required"),
+    choices: z.array(choiceItemSchema).length(4, "Must have exactly 4 choices"),
+    correct_answers: z
+      .array(z.number().int().min(0).max(3))
+      .min(1, "Must have at least 1 correct answer"),
+    // Use backend-generated enum types
+    difficulty: z.enum([
+      "easy",
+      "hard",
+    ] as const) satisfies z.ZodType<QuestionDifficulty>,
+    question_type: z.enum([
+      "mcq",
+      "multiselect",
+    ] as const) satisfies z.ZodType<QuestionType>,
+    subject: z.string().min(1, "Subject is required"),
+    topic: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.question_type === "mcq") {
+        return data.correct_answers.length === 1
+      }
+      return data.correct_answers.length >= 2
+    },
+    {
+      message:
+        "MCQ must have exactly 1 correct answer, multiselect must have at least 2",
+      path: ["correct_answers"],
+    },
+  )
+
+type QuestionFormData = z.infer<typeof questionFormSchema>
 
 interface EditQuestionProps {
   question: QuestionPublic
@@ -52,14 +90,10 @@ const EditQuestion = ({ question, children }: EditQuestionProps) => {
   const queryClient = useQueryClient()
   const { showSuccessToast } = useCustomToast()
   const questionId = useId()
-  const choiceAId = useId()
-  const choiceBId = useId()
-  const choiceCId = useId()
-  const choiceDId = useId()
-  const correctAId = useId()
-  const correctBId = useId()
-  const correctCId = useId()
-  const correctDId = useId()
+  const diffEasyId = useId()
+  const diffHardId = useId()
+  const typeMcqId = useId()
+  const typeMultiId = useId()
 
   // Fetch subjects and topics from dedicated endpoints
   const { data: subjectsData } = useQuery({
@@ -75,48 +109,63 @@ const EditQuestion = ({ question, children }: EditQuestionProps) => {
   const subjects = subjectsData?.data.map((s) => s.name).sort() || []
   const topics = topicsData?.data.map((t) => t.name).sort() || []
 
-  // Parse existing choices (format: "A. Text")
+  // Parse existing choices - handle both old format ("A. Text") and new format ("Text")
   const parseChoice = useCallback((choice: string) => {
     return choice.replace(/^[A-D]\.\s*/, "")
   }, [])
 
+  // Parse correct answers - handle both old format (["A", "B"]) and new format ([0, 1])
+  const parseCorrectAnswers = useCallback((answers: any[]): number[] => {
+    if (!answers || answers.length === 0) return []
+
+    // Check if already indices (numbers)
+    if (typeof answers[0] === "number") {
+      return answers as number[]
+    }
+
+    // Convert letters to indices
+    const letterMap: Record<string, number> = { A: 0, B: 1, C: 2, D: 3 }
+    return answers.map((a) => letterMap[a as string] ?? 0)
+  }, [])
+
   const {
-    register,
+    control,
     handleSubmit,
     reset,
     watch,
     setValue,
-    formState: { errors, isValid, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<QuestionFormData>({
-    mode: "onBlur",
-    criteriaMode: "all",
+    resolver: zodResolver(questionFormSchema),
+    mode: "onChange",
   })
 
   // Reset form when dialog opens with question data
   useEffect(() => {
     if (isOpen) {
+      const parsedChoices = question.choices.map((choice, idx) => ({
+        id: `choice-${idx + 1}`,
+        text: parseChoice(choice),
+      }))
+
+      const parsedCorrectAnswers = parseCorrectAnswers(question.correct_answers)
+
       reset({
         question_text: question.question_text,
-        choice_a: parseChoice(question.choices[0] || ""),
-        choice_b: parseChoice(question.choices[1] || ""),
-        choice_c: parseChoice(question.choices[2] || ""),
-        choice_d: parseChoice(question.choices[3] || ""),
-        correct_a: question.correct_answers.includes("A"),
-        correct_b: question.correct_answers.includes("B"),
-        correct_c: question.correct_answers.includes("C"),
-        correct_d: question.correct_answers.includes("D"),
+        choices: parsedChoices,
+        correct_answers: parsedCorrectAnswers,
+        difficulty: (question.difficulty as "easy" | "hard") || "easy",
+        question_type:
+          (question.question_type as "mcq" | "multiselect") || "mcq",
         subject: question.subject,
         topic: question.topic || "",
       })
     }
-  }, [isOpen, question, reset, parseChoice])
+  }, [isOpen, question, reset, parseChoice, parseCorrectAnswers])
 
-  const correctAnswers = {
-    a: watch("correct_a"),
-    b: watch("correct_b"),
-    c: watch("correct_c"),
-    d: watch("correct_d"),
-  }
+  const choices = watch("choices")
+  const correctAnswers = watch("correct_answers")
+  const questionType = watch("question_type")
 
   const mutation = useMutation({
     mutationFn: (data: QuestionUpdate) =>
@@ -135,31 +184,97 @@ const EditQuestion = ({ question, children }: EditQuestionProps) => {
     },
   })
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) return
+
+    const oldIndex = choices.findIndex((c) => c.id === active.id)
+    const newIndex = choices.findIndex((c) => c.id === over.id)
+
+    // Reorder choices
+    const newChoices = arrayMove(choices, oldIndex, newIndex)
+    setValue("choices", newChoices, { shouldValidate: true })
+
+    // Update correct_answers indices
+    const newCorrectAnswers = correctAnswers.map((idx) => {
+      if (idx === oldIndex) return newIndex
+      if (idx > oldIndex && idx <= newIndex) return idx - 1
+      if (idx < oldIndex && idx >= newIndex) return idx + 1
+      return idx
+    })
+    setValue("correct_answers", newCorrectAnswers, { shouldValidate: true })
+  }
+
+  const handleChoiceTextChange = (index: number, text: string) => {
+    const newChoices = [...choices]
+    newChoices[index].text = text
+    setValue("choices", newChoices, { shouldValidate: true })
+  }
+
+  const handleCorrectChange = (index: number, checked: boolean) => {
+    let newCorrectAnswers = [...correctAnswers]
+
+    if (questionType === "mcq") {
+      // MCQ: single selection
+      newCorrectAnswers = checked ? [index] : []
+    } else {
+      // Multiselect: multiple selection
+      if (checked) {
+        if (!newCorrectAnswers.includes(index)) {
+          newCorrectAnswers.push(index)
+        }
+      } else {
+        newCorrectAnswers = newCorrectAnswers.filter((i) => i !== index)
+      }
+    }
+
+    setValue("correct_answers", newCorrectAnswers, { shouldValidate: true })
+  }
+
   const onSubmit: SubmitHandler<QuestionFormData> = (data) => {
-    const choices = [
-      `A. ${data.choice_a}`,
-      `B. ${data.choice_b}`,
-      `C. ${data.choice_c}`,
-      `D. ${data.choice_d}`,
-    ]
-
-    const correct_answers: string[] = []
-    if (data.correct_a) correct_answers.push("A")
-    if (data.correct_b) correct_answers.push("B")
-    if (data.correct_c) correct_answers.push("C")
-    if (data.correct_d) correct_answers.push("D")
-
-    if (correct_answers.length === 0) {
+    // Validate correct answers
+    if (data.correct_answers.length === 0) {
       handleError({
         message: "Please select at least one correct answer",
       } as any)
       return
     }
 
+    if (data.question_type === "mcq" && data.correct_answers.length !== 1) {
+      handleError({
+        message: "MCQ questions must have exactly 1 correct answer",
+      } as any)
+      return
+    }
+
+    if (
+      data.question_type === "multiselect" &&
+      data.correct_answers.length < 2
+    ) {
+      handleError({
+        message: "Multiselect questions must have at least 2 correct answers",
+      } as any)
+      return
+    }
+
+    // Validate all choices are filled
+    if (data.choices.some((c) => !c.text.trim())) {
+      handleError({
+        message: "All choices must be filled",
+      } as any)
+      return
+    }
+
+    // Extract plain text choices (no labels)
+    const choicesText = data.choices.map((c) => c.text)
+
     const questionData: QuestionUpdate = {
       question_text: data.question_text,
-      choices,
-      correct_answers,
+      choices: choicesText,
+      correct_answers: data.correct_answers,
+      difficulty: data.difficulty,
+      question_type: data.question_type,
       subject: data.subject,
       topic: data.topic || null,
     }
@@ -170,13 +285,12 @@ const EditQuestion = ({ question, children }: EditQuestionProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
             <DialogTitle>Edit Question</DialogTitle>
             <DialogDescription>
-              Update the question details. Select one or more correct answers
-              for multi-select questions.
+              Update the question details. Drag choices to reorder them.
             </DialogDescription>
           </DialogHeader>
 
@@ -185,10 +299,17 @@ const EditQuestion = ({ question, children }: EditQuestionProps) => {
               <Label htmlFor={questionId}>
                 Question Text <span className="text-destructive">*</span>
               </Label>
-              <RichTextEditor
-                value={watch("question_text")}
-                onChange={(html) => setValue("question_text", html)}
-                placeholder="Enter your question here..."
+              <Controller
+                name="question_text"
+                control={control}
+                rules={{ required: "Question text is required" }}
+                render={({ field }) => (
+                  <RichTextEditor
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Enter your question here..."
+                  />
+                )}
               />
               {errors.question_text && (
                 <p className="text-sm text-destructive">
@@ -197,108 +318,136 @@ const EditQuestion = ({ question, children }: EditQuestionProps) => {
               )}
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>
+                  Difficulty <span className="text-destructive">*</span>
+                </Label>
+                <Controller
+                  name="difficulty"
+                  control={control}
+                  render={({ field }) => (
+                    <RadioGroup
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="easy" id={diffEasyId} />
+                        <Label
+                          htmlFor={diffEasyId}
+                          className="font-normal cursor-pointer"
+                        >
+                          Easy
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="hard" id={diffHardId} />
+                        <Label
+                          htmlFor={diffHardId}
+                          className="font-normal cursor-pointer"
+                        >
+                          Hard
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>
+                  Question Type <span className="text-destructive">*</span>
+                </Label>
+                <Controller
+                  name="question_type"
+                  control={control}
+                  render={({ field }) => (
+                    <RadioGroup
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="mcq" id={typeMcqId} />
+                        <Label
+                          htmlFor={typeMcqId}
+                          className="font-normal cursor-pointer"
+                        >
+                          MCQ (Single)
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="multiselect" id={typeMultiId} />
+                        <Label
+                          htmlFor={typeMultiId}
+                          className="font-normal cursor-pointer"
+                        >
+                          Multiselect
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  )}
+                />
+              </div>
+            </div>
+
             <div className="space-y-3">
               <Label>
                 Choices <span className="text-destructive">*</span>
+                <span className="text-sm text-muted-foreground ml-2">
+                  (Drag to reorder)
+                </span>
               </Label>
 
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id={correctAId}
-                  checked={correctAnswers.a}
-                  onCheckedChange={(checked) =>
-                    setValue("correct_a", !!checked)
-                  }
-                />
-                <Label htmlFor={choiceAId} className="flex-1 mb-0">
-                  A.
-                </Label>
-                <Input
-                  id={choiceAId}
-                  {...register("choice_a", {
-                    required: "Choice A is required.",
-                  })}
-                  placeholder="Choice A"
-                  className="flex-1"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id={correctBId}
-                  checked={correctAnswers.b}
-                  onCheckedChange={(checked) =>
-                    setValue("correct_b", !!checked)
-                  }
-                />
-                <Label htmlFor={choiceBId} className="flex-1 mb-0">
-                  B.
-                </Label>
-                <Input
-                  id={choiceBId}
-                  {...register("choice_b", {
-                    required: "Choice B is required.",
-                  })}
-                  placeholder="Choice B"
-                  className="flex-1"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id={correctCId}
-                  checked={correctAnswers.c}
-                  onCheckedChange={(checked) =>
-                    setValue("correct_c", !!checked)
-                  }
-                />
-                <Label htmlFor={choiceCId} className="flex-1 mb-0">
-                  C.
-                </Label>
-                <Input
-                  id={choiceCId}
-                  {...register("choice_c", {
-                    required: "Choice C is required.",
-                  })}
-                  placeholder="Choice C"
-                  className="flex-1"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id={correctDId}
-                  checked={correctAnswers.d}
-                  onCheckedChange={(checked) =>
-                    setValue("correct_d", !!checked)
-                  }
-                />
-                <Label htmlFor={choiceDId} className="flex-1 mb-0">
-                  D.
-                </Label>
-                <Input
-                  id={choiceDId}
-                  {...register("choice_d", {
-                    required: "Choice D is required.",
-                  })}
-                  placeholder="Choice D"
-                  className="flex-1"
-                />
-              </div>
+              <DndContext
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={choices?.map((c) => c.id) || []}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {choices?.map((choice, index) => (
+                      <DraggableChoice
+                        key={choice.id}
+                        id={choice.id}
+                        index={index}
+                        text={choice.text}
+                        isCorrect={correctAnswers?.includes(index) || false}
+                        onTextChange={(text) =>
+                          handleChoiceTextChange(index, text)
+                        }
+                        onCorrectChange={(checked) =>
+                          handleCorrectChange(index, checked)
+                        }
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </div>
 
             <div className="space-y-2">
               <Label>
                 Subject <span className="text-destructive">*</span>
               </Label>
-              <Combobox
-                options={subjects}
-                value={watch("subject")}
-                onValueChange={(value) => setValue("subject", value)}
-                placeholder="Select or add subject..."
-                searchPlaceholder="Search subjects..."
-                addNewText="Add new subject"
-                emptyText="No subjects found. Type to add new."
+              <Controller
+                name="subject"
+                control={control}
+                rules={{ required: "Subject is required" }}
+                render={({ field }) => (
+                  <Combobox
+                    options={subjects}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder="Select or add subject..."
+                    searchPlaceholder="Search subjects..."
+                    addNewText="Add new subject"
+                    emptyText="No subjects found. Type to add new."
+                  />
+                )}
               />
               {errors.subject && (
                 <p className="text-sm text-destructive">
@@ -309,14 +458,20 @@ const EditQuestion = ({ question, children }: EditQuestionProps) => {
 
             <div className="space-y-2">
               <Label>Topic (Optional)</Label>
-              <Combobox
-                options={topics}
-                value={watch("topic") || ""}
-                onValueChange={(value) => setValue("topic", value)}
-                placeholder="Select or add topic..."
-                searchPlaceholder="Search topics..."
-                addNewText="Add new topic"
-                emptyText="No topics found. Type to add new."
+              <Controller
+                name="topic"
+                control={control}
+                render={({ field }) => (
+                  <Combobox
+                    options={topics}
+                    value={field.value || ""}
+                    onValueChange={field.onChange}
+                    placeholder="Select or add topic..."
+                    searchPlaceholder="Search topics..."
+                    addNewText="Add new topic"
+                    emptyText="No topics found. Type to add new."
+                  />
+                )}
               />
             </div>
           </div>
