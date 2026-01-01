@@ -11,5 +11,6 @@
       "database": "app",
       "username": "postgres"
     }
-  ]
+  ],
+  "prettier.configPath": ""
 }

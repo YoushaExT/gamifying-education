@@ -104,6 +104,19 @@ alembic downgrade -1
 alembic history
 ```
 
+**Fallback: If local venv fails** (e.g., no .env file or database connection issues):
+
+```bash
+# Run migration inside Docker container with explicit PYTHONPATH
+docker compose exec backend bash -c "export PYTHONPATH=/app && alembic upgrade head"
+
+# Rollback inside Docker
+docker compose exec backend bash -c "export PYTHONPATH=/app && alembic downgrade -1"
+
+# View history inside Docker
+docker compose exec backend bash -c "export PYTHONPATH=/app && alembic history"
+```
+
 ### API Client Generation
 
 After ANY changes to backend API routes or models:
@@ -433,7 +446,7 @@ POSTGRES_PASSWORD=changethis
 
 # AI Generation
 OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4o-mini
+OPENAI_MODEL=gpt-5-mini-2025-08-07
 GENERATION_TEMPERATURE=0.7
 
 # Feature Flags
@@ -625,3 +638,24 @@ Check permissions on both frontend (UI) and backend (API) for security.
 - **Frontend Setup**: `frontend/README.md`
 - **Development Guide**: `development.md`
 - **Deployment**: `deployment.md`
+
+## IMPORTANT - After making frontend changes check lint and typescript errors:
+
+```
+cd frontend
+npx tsc -p tsconfig.json --noEmit
+npm run lint
+```
+
+## IMPORTANT - After making backend changes run lint and formatting and generate client
+
+(from root)
+```
+./scripts/generate-client.sh
+```
+(from backend directory)
+```
+cd backend
+bash scripts/format.sh
+bash scripts/lint.sh
+```

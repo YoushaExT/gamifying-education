@@ -99,6 +99,10 @@ class FormatValidator:
         field_errors = self._validate_fields(question)
         errors.extend(field_errors)
 
+        # 6. Validate question_type consistency
+        type_errors = self._validate_question_type_consistency(question)
+        errors.extend(type_errors)
+
         return ValidationResult(passed=len(errors) == 0, errors=errors, warnings=[])
 
     def _contains_html(self, text: str) -> bool:
@@ -156,7 +160,7 @@ class FormatValidator:
         """Validate choices array.
 
         Args:
-            choices: List of answer choices
+            choices: List of answer choices (plain text, no labels)
 
         Returns:
             List of error messages
@@ -170,6 +174,11 @@ class FormatValidator:
         for i, choice in enumerate(choices):
             if not choice or not choice.strip():
                 errors.append(f"Choice {i} is empty")
+            # Check if choice starts with letter label (should not)
+            if choice.strip() and choice.strip()[0:2] in ["A.", "B.", "C.", "D."]:
+                errors.append(
+                    f"Choice {i} should not start with letter label (A., B., C., D.). Use plain text only."
+                )
 
         # Check for duplicates
         if len(choices) != len(set(choices)):
@@ -178,12 +187,12 @@ class FormatValidator:
         return errors
 
     def _validate_answers(
-        self, correct_answers: list[str], choices: list[str]
+        self, correct_answers: list[int], choices: list[str]
     ) -> list[str]:
         """Validate correct answers.
 
         Args:
-            correct_answers: List of correct answer letters
+            correct_answers: List of correct answer indices (0-3)
             choices: List of all choices
 
         Returns:
@@ -195,10 +204,15 @@ class FormatValidator:
             errors.append("No correct answers provided")
             return errors
 
-        valid_letters = ["A", "B", "C", "D"]
+        # Validate indices are integers in valid range
+        valid_indices = [0, 1, 2, 3]
         for answer in correct_answers:
-            if answer not in valid_letters:
-                errors.append(f"Invalid answer letter: {answer}")
+            if not isinstance(answer, int):
+                errors.append(
+                    f"Invalid answer type: {answer}. Must be integer index (0-3)."
+                )
+            elif answer not in valid_indices:
+                errors.append(f"Invalid answer index: {answer}. Must be 0, 1, 2, or 3.")
 
         # Check for duplicates
         if len(correct_answers) != len(set(correct_answers)):
@@ -217,13 +231,58 @@ class FormatValidator:
         """
         errors = []
 
-        required_fields = ["question_text", "choices", "correct_answers", "subject"]
+        required_fields = [
+            "question_text",
+            "choices",
+            "correct_answers",
+            "subject",
+            "difficulty",
+            "question_type",
+        ]
 
         for field in required_fields:
             if field not in question:
                 errors.append(f"Missing required field: {field}")
             elif not question[field]:
                 errors.append(f"Empty required field: {field}")
+
+        return errors
+
+    def _validate_question_type_consistency(
+        self, question: dict[str, Any]
+    ) -> list[str]:
+        """Validate question_type is consistent with correct_answers.
+
+        Args:
+            question: Question dictionary
+
+        Returns:
+            List of error messages
+        """
+        errors = []
+
+        question_type = question.get("question_type", "mcq")
+        correct_answers = question.get("correct_answers", [])
+
+        # Validate question_type is valid
+        if question_type not in ["mcq", "multiselect"]:
+            errors.append(
+                f"Invalid question_type: {question_type}. Must be 'mcq' or 'multiselect'."
+            )
+            return errors
+
+        # Validate consistency
+        if question_type == "mcq" and len(correct_answers) != 1:
+            errors.append("MCQ questions must have exactly 1 correct answer")
+        elif question_type == "multiselect" and len(correct_answers) < 2:
+            errors.append("Multiselect questions must have at least 2 correct answers")
+
+        # Validate difficulty
+        difficulty = question.get("difficulty", "easy")
+        if difficulty not in ["easy", "hard"]:
+            errors.append(
+                f"Invalid difficulty: {difficulty}. Must be 'easy' or 'hard'."
+            )
 
         return errors
 

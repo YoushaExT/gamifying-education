@@ -51,7 +51,7 @@ export default function PreviewQuestion({
             </h3>
             <div className="space-y-2">
               {question.choices.map((choice, index) => {
-                const isCorrect = question.correct_answers.includes(choice)
+                const isCorrect = question.correct_answers.includes(index)
                 return (
                   <div
                     key={index}

@@ -4,6 +4,7 @@ from app.api.routes import (
     feature_flags,
     items,
     login,
+    media,
     multiplayer_game,
     private,
     question_generation,
@@ -50,6 +51,7 @@ api_router.include_router(
     prefix="/multiplayer",
     tags=["multiplayer-game"],
 )
+api_router.include_router(media.router)
 
 
 if settings.ENVIRONMENT == "local":

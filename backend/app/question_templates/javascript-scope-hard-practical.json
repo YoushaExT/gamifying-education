@@ -1,0 +1,77 @@
+{
+  "subject": "JavaScript",
+  "topic": "Scope",
+  "difficulty": "hard",
+  "template_prompt": "Generate a hard practical multiple-choice question about {topic} in {subject}. Present a real-world scenario or problem and ask how to solve it using scope-related concepts. Test ability to apply knowledge of closures, scope management, or variable shadowing to practical situations. DO NOT include 'A.', 'B.', 'C.', 'D.' labels in choices - use plain text only. Indicate correct answers by INDEX (0, 1, 2, or 3). May include code examples in the question and/or choices. Focus on problem-solving and application.",
+  "example_questions": [
+    {
+      "question_text": "<p>You need to create a function that returns an array of functions, where each function logs its index when called. Which implementation is correct?</p>",
+      "choices": [
+        "<pre><code>function createFunctions() {\n  let arr = [];\n  for (var i = 0; i < 3; i++) {\n    arr.push(function() { console.log(i); });\n  }\n  return arr;\n}</code></pre>",
+        "<pre><code>function createFunctions() {\n  let arr = [];\n  for (let i = 0; i < 3; i++) {\n    arr.push(function() { console.log(i); });\n  }\n  return arr;\n}</code></pre>",
+        "<pre><code>function createFunctions() {\n  let arr = [];\n  let i = 0;\n  while (i < 3) {\n    arr.push(function() { console.log(i); });\n    i++;\n  }\n  return arr;\n}</code></pre>",
+        "<pre><code>function createFunctions() {\n  return [() => 0, () => 1, () => 2];\n}</code></pre>"
+      ],
+      "correct_answers": [1],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "explanation": "Using 'let' in a for loop creates a new binding for each iteration, so each function captures a different value of i. Using 'var' would cause all functions to share the same i variable."
+    },
+    {
+      "question_text": "<p>You want to create a module that has private variables that cannot be accessed from outside. Which pattern achieves this?</p>",
+      "choices": [
+        "Using global variables with underscore prefix",
+        "Using an IIFE (Immediately Invoked Function Expression) that returns an object with public methods",
+        "Using var declarations in the global scope",
+        "Using const with uppercase names"
+      ],
+      "correct_answers": [1],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "explanation": "An IIFE creates a new scope, and returning an object with methods creates closures that can access the private variables while keeping them inaccessible from outside."
+    },
+    {
+      "question_text": "<p>You need to fix this code so each button displays its own number when clicked:</p><pre><code class=\"language-javascript\">for (var i = 1; i <= 3; i++) {\n  const button = document.createElement('button');\n  button.textContent = 'Button ' + i;\n  button.onclick = function() { alert(i); };\n  document.body.appendChild(button);\n}</code></pre><p>Which approaches will fix this? (Select all that apply)</p>",
+      "choices": [
+        "Change var i to let i in the loop",
+        "Use an IIFE to capture the value: button.onclick = (function(num) { return function() { alert(num); }; })(i);",
+        "Add a data attribute and read it in the handler: button.dataset.num = i; button.onclick = function() { alert(this.dataset.num); };",
+        "Use setTimeout to delay the alert"
+      ],
+      "correct_answers": [0, 1, 2],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "hard",
+      "question_type": "multiselect",
+      "explanation": "Three solutions work: (1) let creates a new binding per iteration, (2) IIFE creates a new scope capturing the current i, (3) data attribute stores the value on the element. setTimeout doesn't solve the scope issue."
+    },
+    {
+      "question_text": "<p>You need to implement a memoization function that remembers previous results. Which implementation correctly uses closure?</p>",
+      "choices": [
+        "<pre><code>function memoize(fn) {\n  return function(arg) {\n    const cache = {};\n    if (cache[arg]) return cache[arg];\n    const result = fn(arg);\n    cache[arg] = result;\n    return result;\n  };\n}</code></pre>",
+        "<pre><code>function memoize(fn) {\n  const cache = {};\n  return function(arg) {\n    if (cache[arg]) return cache[arg];\n    const result = fn(arg);\n    cache[arg] = result;\n    return result;\n  };\n}</code></pre>",
+        "<pre><code>function memoize(fn, cache = {}) {\n  return function(arg) {\n    if (cache[arg]) return cache[arg];\n    const result = fn(arg);\n    cache[arg] = result;\n    return result;\n  };\n}</code></pre>",
+        "<pre><code>const cache = {};\nfunction memoize(fn) {\n  return function(arg) {\n    if (cache[arg]) return cache[arg];\n    const result = fn(arg);\n    cache[arg] = result;\n    return result;\n  };\n}</code></pre>"
+      ],
+      "correct_answers": [1],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "explanation": "The cache must be declared outside the returned function but inside memoize, so it persists across calls but is private to each memoized function. Option 1 recreates cache on each call, losing memoization."
+    }
+  ],
+  "constraints": {
+    "require_code": true,
+    "code_language": "javascript",
+    "max_question_length": 800,
+    "min_code_lines": 3,
+    "include_explanation": false,
+    "no_labels_in_choices": true,
+    "use_index_for_answers": true
+  }
+}

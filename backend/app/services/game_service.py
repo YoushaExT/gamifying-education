@@ -197,7 +197,7 @@ class CardGameService:
         player: str,
         card: dict[str, Any],
         question: Question,
-        selected_answers: list[str],
+        selected_answers: list[int],
     ) -> tuple[bool, int]:
         """
         Resolve a player's answer and apply card effects.
@@ -216,13 +216,13 @@ class CardGameService:
             return False, 0
 
         # Check if answer is correct
-        # Both selected_answers and correct_answers should be letters like ['A', 'B']
-        selected_normalized = sorted([a.upper() for a in selected_answers])
-        correct_normalized = sorted([a.upper() for a in question.correct_answers])
+        # Both selected_answers and correct_answers are indices like [0, 1]
+        selected_sorted = sorted(selected_answers)
+        correct_sorted = sorted(question.correct_answers)
 
-        logger.info(f"Selected: {selected_normalized}, Correct: {correct_normalized}")
+        logger.info(f"Selected: {selected_sorted}, Correct: {correct_sorted}")
 
-        is_correct = selected_normalized == correct_normalized
+        is_correct = selected_sorted == correct_sorted
 
         # Get effect value based on correctness
         effect_data = card.get("effect_data", {})

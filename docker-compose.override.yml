@@ -80,11 +80,14 @@ services:
     # TODO: remove once coverage is done locally
     volumes:
       - ./backend/htmlcov:/app/htmlcov
+      - ./backend/media:/app/media  # Local media storage for development
     environment:
       SMTP_HOST: "mailcatcher"
       SMTP_PORT: "1025"
       SMTP_TLS: "false"
       EMAILS_FROM_EMAIL: "noreply@example.com"
+      MEDIA_STORAGE_BACKEND: "local"
+      MEDIA_LOCAL_PATH: "/app/media"
 
   mailcatcher:
     image: schickling/mailcatcher

@@ -20,12 +20,12 @@ logger = logging.getLogger(__name__)
 class OpenAIProvider(LLMProvider):
     """OpenAI implementation of the LLM provider interface."""
 
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+    def __init__(self, api_key: str, model: str = "gpt-5-mini-2025-08-07"):
         """Initialize the OpenAI provider.
 
         Args:
             api_key: OpenAI API key
-            model: Model to use (default: gpt-4o-mini)
+            model: Model to use (default: gpt-5-mini-2025-08-07)
         """
         self.client = OpenAI(api_key=api_key)
         self.model = model
@@ -56,19 +56,22 @@ class OpenAIProvider(LLMProvider):
             List of question dictionaries
         """
         try:
+            # gpt-5-mini models only support temperature=1
+            model_temperature = 1.0 if "gpt-5-mini" in self.model else temperature
+
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an expert educator creating high-quality multiple-choice questions. Always respond with valid JSON.",
+                        "content": "You are an expert educator creating high-quality multiple-choice questions. Always respond with valid JSON. DO NOT generate images in questions - text and code only.",
                     },
                     {
                         "role": "user",
-                        "content": f'{prompt}\n\nGenerate {num_questions} question(s). Return as JSON with this structure:\n{{\n  "questions": [\n    {{\n      "question_text": "<p>Question with HTML formatting</p>",\n      "choices": ["A. Choice 1", "B. Choice 2", "C. Choice 3", "D. Choice 4"],\n      "correct_answers": ["A"]\n    }}\n  ]\n}}',
+                        "content": f'{prompt}\n\nGenerate {num_questions} question(s). Return as JSON with this structure:\n{{\n  "questions": [\n    {{\n      "question_text": "<p>Question with HTML formatting</p>",\n      "choices": ["Plain text choice 1", "Plain text choice 2", "Plain text choice 3", "Plain text choice 4"],\n      "correct_answers": [0],\n      "difficulty": "easy",\n      "question_type": "mcq"\n    }}\n  ]\n}}\n\nCRITICAL FORMAT REQUIREMENTS:\n- DO NOT include "A.", "B.", "C.", "D." labels in choices - use plain text only\n- correct_answers must be array of indices (0, 1, 2, or 3), not letters\n- For single correct answer: use [0], [1], [2], or [3]\n- For multiple correct answers: use [0, 2], [1, 3], etc.\n- Include "difficulty" field: "easy" or "hard"\n- Include "question_type" field: "mcq" (single answer) or "multiselect" (2+ answers)\n- DO NOT generate or reference images',
                     },
                 ],
-                temperature=temperature,
+                temperature=model_temperature,
                 response_format={"type": "json_object"},
             )
 
@@ -111,6 +114,9 @@ class OpenAIProvider(LLMProvider):
         try:
             validation_prompt = criteria.get("prompt", "")
 
+            # gpt-5-mini models only support temperature=1
+            model_temperature = 1.0 if "gpt-5-mini" in self.model else 0.3
+
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -123,7 +129,7 @@ class OpenAIProvider(LLMProvider):
                         "content": f'{validation_prompt}\n\nReturn as JSON: {{"overall_score": 85, "criteria_scores": {{"relevance": 90, "correctness": 85, "clarity": 80, "difficulty": 85, "distractors": 85}}, "feedback": "Detailed feedback here"}}',
                     },
                 ],
-                temperature=0.3,  # Lower temperature for more consistent validation
+                temperature=model_temperature,
                 response_format={"type": "json_object"},
             )
 
@@ -170,6 +176,9 @@ class OpenAIProvider(LLMProvider):
             JSON string containing the taxonomy structure
         """
         try:
+            # gpt-5-mini models only support temperature=1
+            model_temperature = 1.0 if "gpt-5-mini" in self.model else 0.7
+
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -182,7 +191,7 @@ class OpenAIProvider(LLMProvider):
                         "content": prompt,
                     },
                 ],
-                temperature=0.7,
+                temperature=model_temperature,
                 response_format={"type": "json_object"},
             )
 

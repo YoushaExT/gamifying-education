@@ -6,3 +6,7 @@ app.egg-info
 htmlcov
 .cache
 .venv
+
+# Local media files (development only - production uses S3)
+media/*
+!media/.gitkeep

@@ -12,9 +12,7 @@ import {
   TopicsService,
 } from "@/client"
 import AddQuestion from "@/components/Questions/AddQuestion"
-import DeleteQuestion from "@/components/Questions/DeleteQuestion"
-import EditQuestion from "@/components/Questions/EditQuestion"
-import PreviewQuestion from "@/components/Questions/PreviewQuestion"
+import { useDeleteQuestion } from "@/components/Questions/useDeleteQuestion"
 import { Button } from "@/components/ui/button"
 import { Combobox } from "@/components/ui/combobox"
 import { Container } from "@/components/ui/container"
@@ -25,6 +23,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Label } from "@/components/ui/label"
+import { MODAL_IDS } from "@/services/modals/ModalRegistry"
+import ModalService from "@/services/modals/ModalService"
 
 // Helper function to strip HTML tags for preview
 function stripHtmlTags(html: string): string {
@@ -229,7 +229,9 @@ function Questions() {
                               : "bg-green-100 text-green-700"
                           }`}
                         >
-                          {question.correct_answers.join(", ")}
+                          {question.correct_answers
+                            .map((idx) => String.fromCharCode(65 + idx))
+                            .join(", ")}
                         </span>
                       </td>
                       <td className="p-4">
@@ -277,6 +279,26 @@ interface QuestionActionsMenuProps {
 }
 
 function QuestionActionsMenu({ question }: QuestionActionsMenuProps) {
+  const { deleteQuestion } = useDeleteQuestion()
+
+  const handlePreview = () => {
+    ModalService.openModalById(MODAL_IDS.PREVIEW_QUESTION, {
+      question,
+      className: "max-w-3xl",
+    })
+  }
+
+  const handleEdit = () => {
+    ModalService.openModalById(MODAL_IDS.EDIT_QUESTION, {
+      question,
+      className: "sm:max-w-[700px]",
+    })
+  }
+
+  const handleDelete = () => {
+    deleteQuestion(question.id, stripHtmlTags(question.question_text))
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -285,30 +307,18 @@ function QuestionActionsMenu({ question }: QuestionActionsMenuProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <PreviewQuestion question={question}>
-          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-            <Eye className="mr-2 size-4" />
-            Preview
-          </DropdownMenuItem>
-        </PreviewQuestion>
-        <EditQuestion question={question}>
-          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-            <Edit className="mr-2 size-4" />
-            Edit
-          </DropdownMenuItem>
-        </EditQuestion>
-        <DeleteQuestion
-          questionId={question.id}
-          questionText={question.question_text}
-        >
-          <DropdownMenuItem
-            onSelect={(e) => e.preventDefault()}
-            className="text-destructive"
-          >
-            <Trash2 className="mr-2 size-4" />
-            Delete
-          </DropdownMenuItem>
-        </DeleteQuestion>
+        <DropdownMenuItem onSelect={handlePreview}>
+          <Eye className="mr-2 size-4" />
+          Preview
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={handleEdit}>
+          <Edit className="mr-2 size-4" />
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={handleDelete} className="text-destructive">
+          <Trash2 className="mr-2 size-4" />
+          Delete
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

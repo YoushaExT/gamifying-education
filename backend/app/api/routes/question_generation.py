@@ -51,6 +51,7 @@ class GenerateQuestionRequest(BaseModel):
     num_questions: int = 5
     skip_content_validation: bool = False
     temperature: float = 0.7
+    custom_prompt: str | None = None  # Optional additional prompt for customization
 
 
 class GenerateQuestionResponse(BaseModel):
@@ -61,6 +62,13 @@ class GenerateQuestionResponse(BaseModel):
     successful: int
     failed: int
     questions: list[dict[str, Any]]
+
+
+class ApproveQuestionRequest(BaseModel):
+    """Request model for approving a question with optional modifications."""
+
+    choices: list[str] | None = None
+    correct_answers: list[int] | None = None
 
 
 class RejectQuestionRequest(BaseModel):
@@ -122,6 +130,7 @@ async def generate_questions(
             user_id=current_user.id,
             skip_content_validation=request.skip_content_validation,
             temperature=request.temperature,
+            custom_prompt=request.custom_prompt,
         )
 
         return GenerateQuestionResponse(
@@ -185,8 +194,12 @@ async def approve_generated_question(
     current_user: CurrentTeacherOrSuperuser,
     feature_flags: FeatureFlagsDep,
     question_id: uuid.UUID,
+    request: ApproveQuestionRequest = ApproveQuestionRequest(),
 ) -> Any:
     """Approve a generated question and add it to the question bank.
+
+    Optionally accepts modified choices and correct_answers to update the question
+    before approval.
 
     Requires teacher or superuser permissions.
     """
@@ -195,7 +208,18 @@ async def approve_generated_question(
     review_service = ReviewService(session)
 
     try:
-        question = await review_service.approve_question(question_id, current_user.id)
+        # Prepare modifications if provided
+        modifications: dict[str, Any] | None = None
+        if request.choices or request.correct_answers:
+            modifications = {}
+            if request.choices:
+                modifications["choices"] = request.choices
+            if request.correct_answers:
+                modifications["correct_answers"] = request.correct_answers
+
+        question = await review_service.approve_question(
+            question_id, current_user.id, modifications=modifications
+        )
         # Convert Question to QuestionPublic with subject/topic names
         from app.api.routes.questions import question_to_public
 

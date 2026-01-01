@@ -1,18 +1,22 @@
+import { EditQuestionModal } from "@/components/Questions/EditQuestionModal"
+import { PreviewQuestionModal } from "@/components/Questions/PreviewQuestionModal"
 import type { ModalRegistry } from "./ModalService.interface"
-
-// Import modal components here as needed
-// import { ExampleModal } from '@/components/modals/ExampleModal'
+import { ModalType } from "./ModalService.interface"
 
 export const MODAL_IDS = {
-  // Add modal IDs here as needed
-  // EXAMPLE: 'example-modal',
+  EDIT_QUESTION: "edit-question",
+  PREVIEW_QUESTION: "preview-question",
 } as const
 
 export const modalRegistry: ModalRegistry = {
-  // Register modals here
-  // [MODAL_IDS.EXAMPLE]: {
-  //   id: MODAL_IDS.EXAMPLE,
-  //   component: ExampleModal,
-  //   type: ModalType.DIALOG,
-  // },
+  [MODAL_IDS.EDIT_QUESTION]: {
+    id: MODAL_IDS.EDIT_QUESTION,
+    component: EditQuestionModal,
+    type: ModalType.DIALOG,
+  },
+  [MODAL_IDS.PREVIEW_QUESTION]: {
+    id: MODAL_IDS.PREVIEW_QUESTION,
+    component: PreviewQuestionModal,
+    type: ModalType.DIALOG,
+  },
 }

@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
 import type { ConfirmationOptions } from "@/services/modals/ModalService.interface"
 
 interface ModalWrapperProps {
@@ -18,6 +19,7 @@ interface ModalWrapperProps {
   modalContent: ComponentType<any>
   modalProps?: Record<string, unknown>
   showCloseButton?: boolean
+  className?: string
 }
 
 export function DialogWrapper({
@@ -26,10 +28,14 @@ export function DialogWrapper({
   modalContent: ModalContent,
   modalProps,
   showCloseButton = true,
+  className,
 }: ModalWrapperProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent showCloseButton={showCloseButton}>
+      <DialogContent
+        showCloseButton={showCloseButton}
+        className={cn("max-h-[calc(100vh-16px)] overflow-y-auto", className)}
+      >
         <ModalContent {...modalProps} onClose={onClose} />
       </DialogContent>
     </Dialog>

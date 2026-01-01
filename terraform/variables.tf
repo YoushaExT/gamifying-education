@@ -145,3 +145,10 @@ variable "ecr_frontend_repository_name" {
   type        = string
   default     = "gamifying-education-frontend"
 }
+
+# S3 Configuration (bucket managed in separate terraform-s3 project)
+variable "s3_media_bucket_name" {
+  description = "S3 bucket name for media storage (from terraform-s3)"
+  type        = string
+  default     = "gamifying-education-production-media"
+}
