@@ -101,7 +101,9 @@ function Dashboard() {
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor={roomCodeInputId}>Room Code</Label>
+                    <Label htmlFor={roomCodeInputId} className="mb-3">
+                      Room Code
+                    </Label>
                     <Input
                       id={roomCodeInputId}
                       placeholder="ABC123"
