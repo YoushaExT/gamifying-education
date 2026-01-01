@@ -142,7 +142,7 @@ function GamePlayPage() {
   }
 
   // Handle question submit
-  const handleQuestionSubmit = async (selectedAnswers: string[]) => {
+  const handleQuestionSubmit = async (selectedAnswers: number[]) => {
     if (selectedCardIndex === null) return
 
     setIsSubmitting(true)

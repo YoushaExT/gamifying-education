@@ -451,7 +451,7 @@ export function useGameWebSocket({
     }
   }
 
-  const playCard = (cardIndex: number, selectedAnswers: string[]) => {
+  const playCard = (cardIndex: number, selectedAnswers: number[]) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(
         JSON.stringify({

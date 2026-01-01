@@ -25,13 +25,17 @@ class ReviewService:
         self.session = session
 
     async def approve_question(
-        self, generated_question_id: uuid.UUID, reviewer_id: uuid.UUID
+        self,
+        generated_question_id: uuid.UUID,
+        reviewer_id: uuid.UUID,
+        modifications: dict[str, Any] | None = None,
     ) -> Question:
         """Approve a generated question and move it to the Question table.
 
         Args:
             generated_question_id: ID of generated question to approve
             reviewer_id: ID of user approving the question
+            modifications: Optional modifications to apply (choices, correct_answers)
 
         Returns:
             The created Question object
@@ -48,7 +52,17 @@ class ReviewService:
             raise ValueError(f"Question already reviewed with status: {gen_q.status}")
 
         # 2. Create Question from question_data
-        question_data = gen_q.question_data
+        question_data: dict[str, Any] = gen_q.question_data
+
+        # Apply modifications if provided
+        if modifications:
+            logger.info(
+                f"Applying modifications to question {generated_question_id}: {modifications}"
+            )
+            if "choices" in modifications:
+                question_data["choices"] = modifications["choices"]
+            if "correct_answers" in modifications:
+                question_data["correct_answers"] = modifications["correct_answers"]
 
         # Get or create subject
         subject = crud.get_or_create_subject(

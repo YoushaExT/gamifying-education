@@ -132,7 +132,7 @@ FIRST_SUPERUSER_PASSWORD=${first_superuser_password}
 
 # OpenAI
 OPENAI_API_KEY=${openai_api_key}
-OPENAI_MODEL=gpt-4o-mini
+OPENAI_MODEL=gpt-5-mini-2025-08-07
 GENERATION_TEMPERATURE=0.7
 
 # CORS (allow your domain)

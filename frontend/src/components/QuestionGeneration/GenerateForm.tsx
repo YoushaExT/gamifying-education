@@ -14,13 +14,14 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Combobox } from "@/components/ui/combobox"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
+import { Textarea } from "@/components/ui/textarea"
 
 export interface GenerateFormData {
   subject: string
   topic?: string
   num_questions: number
   skip_content_validation: boolean
-  temperature: number
+  custom_prompt?: string
 }
 
 interface GenerateFormProps {
@@ -30,6 +31,7 @@ interface GenerateFormProps {
 
 export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
   const skipValidationId = useId()
+  const customPromptId = useId()
   const {
     handleSubmit,
     watch,
@@ -41,12 +43,11 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
       topic: "",
       num_questions: 1,
       skip_content_validation: true,
-      temperature: 0.7,
+      custom_prompt: "",
     },
   })
 
   const [numQuestions, setNumQuestions] = useState(1)
-  const [temperature, setTemperature] = useState(0.7)
   const [skipValidation, setSkipValidation] = useState(true)
 
   // Fetch subjects and topics
@@ -68,7 +69,6 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
       ...data,
       num_questions: numQuestions,
       skip_content_validation: skipValidation,
-      temperature: temperature,
     })
   }
 
@@ -111,6 +111,25 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
             />
           </div>
 
+          {/* Custom Prompt Field */}
+          <div className="space-y-2">
+            <Label htmlFor={customPromptId}>
+              Custom Instructions (Optional)
+            </Label>
+            <Textarea
+              id={customPromptId}
+              value={watch("custom_prompt") || ""}
+              onChange={(e) => setValue("custom_prompt", e.target.value)}
+              placeholder="E.g., 'Focus on async/await edge cases' or 'Include error handling questions' or 'Test understanding of closures in practical scenarios'"
+              rows={3}
+              className="resize-none"
+            />
+            <p className="text-sm text-gray-500">
+              Provide additional context or specific guidance for question
+              generation
+            </p>
+          </div>
+
           {/* Number of Questions */}
           <div className="space-y-2">
             <Label htmlFor="num_questions">
@@ -143,25 +162,6 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
               Enable AI Content Validation (checks quality, relevance, and
               difficulty)
             </Label>
-          </div>
-
-          {/* Temperature Slider (Advanced) */}
-          <div className="space-y-2">
-            <Label htmlFor="temperature">
-              Creativity Level: {temperature.toFixed(1)}
-            </Label>
-            <Slider
-              value={[temperature]}
-              onValueChange={(values: number[]) => setTemperature(values[0])}
-              min={0.3}
-              max={1.0}
-              step={0.1}
-              className="w-full"
-            />
-            <p className="text-sm text-gray-500">
-              Lower values produce more focused questions, higher values more
-              creative ones
-            </p>
           </div>
 
           {/* Submit Button */}

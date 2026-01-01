@@ -116,6 +116,7 @@ class QuestionGeneratorService:
         user_id: uuid.UUID,
         skip_content_validation: bool = False,
         temperature: float = 0.7,
+        custom_prompt: str | None = None,
     ) -> GenerationResult:
         """Generate a batch of questions with diversity optimization.
 
@@ -125,6 +126,7 @@ class QuestionGeneratorService:
             user_id: ID of user generating questions
             skip_content_validation: Skip LLM content validation
             temperature: Generation creativity (0.0-1.0)
+            custom_prompt: Optional custom prompt for additional guidance
 
         Returns:
             GenerationResult with batch details
@@ -139,43 +141,53 @@ class QuestionGeneratorService:
 
         # Extract subject and topic from template
         subject = template.subject if hasattr(template, "subject") else ""
-        topic = template.topic if hasattr(template, "topic") else ""
+        topic = template.topic if hasattr(template, "topic") else None
 
-        if not subject or not topic:
-            raise ValueError(
-                "Template must specify both subject and topic for diversity-based generation"
-            )
+        if not subject:
+            raise ValueError("Template must specify subject")
 
         logger.info(
             f"Generating {num_questions} questions for user {user_id} "
-            f"using template {template_id} (subject={subject}, topic={topic})"
+            f"using template {template_id} (subject={subject}, topic={topic or 'general'})"
         )
 
-        # 3. Pre-generation: Get or generate taxonomy
-        try:
-            taxonomy_dict = await self.taxonomy_generator.get_or_generate_taxonomy(
-                subject, topic, str(user_id)
-            )
-            subtopics_with_weights = taxonomy_dict
-            logger.info(f"Loaded taxonomy with {len(subtopics_with_weights)} subtopics")
-        except Exception as e:
-            logger.warning(
-                f"Failed to load/generate taxonomy: {e}. Proceeding without diversity optimization."
-            )
+        # 3. Pre-generation: Get or generate taxonomy (only if topic is specified)
+        if topic:
+            try:
+                taxonomy_dict = await self.taxonomy_generator.get_or_generate_taxonomy(
+                    subject, topic, str(user_id)
+                )
+                subtopics_with_weights = taxonomy_dict
+                logger.info(
+                    f"Loaded taxonomy with {len(subtopics_with_weights)} subtopics"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to load/generate taxonomy: {e}. Proceeding without diversity optimization."
+                )
+                subtopics_with_weights = {}
+        else:
+            logger.info("No topic specified, skipping taxonomy generation")
             subtopics_with_weights = {}
 
-        # 4. Analyze existing question diversity
-        try:
-            frequency_dist = await self.diversity_analyzer.get_frequency_distribution(
-                subject, topic
-            )
-            logger.info(f"Current distribution: {frequency_dist}")
-        except Exception as e:
-            logger.warning(f"Failed to analyze diversity: {e}")
+        # 4. Analyze existing question diversity (only if topic is specified)
+        if topic:
+            try:
+                frequency_dist = (
+                    await self.diversity_analyzer.get_frequency_distribution(
+                        subject, topic
+                    )
+                )
+                logger.info(f"Current distribution: {frequency_dist}")
+            except Exception as e:
+                logger.warning(f"Failed to analyze diversity: {e}")
+                frequency_dist = {"subtopics": {}, "types": {}}
+        else:
+            logger.info("No topic specified, skipping diversity analysis")
             frequency_dist = {"subtopics": {}, "types": {}}
 
         # 5. Select diverse target subtopic and question type
-        if subtopics_with_weights:
+        if subtopics_with_weights and topic:
             try:
                 (
                     selected_subtopic,
@@ -205,11 +217,16 @@ class QuestionGeneratorService:
                 subtopic=selected_subtopic,
                 question_type=selected_question_type,
             )
-            if selected_subtopic and selected_question_type
+            if selected_subtopic and selected_question_type and topic
             else await self.template_service.render_prompt(
                 template, num_questions=num_questions
             )
         )
+
+        # Append custom prompt if provided
+        if custom_prompt:
+            prompt += f"\n\nADDITIONAL CUSTOM GUIDANCE:\n{custom_prompt}\n"
+            logger.info(f"Appended custom prompt: {custom_prompt[:100]}...")
 
         # 7. Generate questions
         try:
@@ -218,7 +235,7 @@ class QuestionGeneratorService:
                 num_questions=num_questions,
                 temperature=temperature,
                 subject=subject,
-                topic=topic,
+                topic=topic if topic else None,
             )
         except Exception as e:
             logger.error(f"Question generation failed: {e}", exc_info=True)
@@ -333,48 +350,112 @@ class QuestionGeneratorService:
 
         # Add diversity constraints if available
         if subtopic and question_type:
+            # Get difficulty from template
+            difficulty = (
+                template.difficulty if hasattr(template, "difficulty") else "easy"
+            )
+
             diversity_guidance = f"""
 
-IMPORTANT DIVERSITY CONSTRAINTS:
-- Subject: {subject}
-- Topic: {topic}
-- **Focus Subtopic**: {subtopic} (This should be the PRIMARY focus of the question)
-- **Question Type**: {question_type}
+CRITICAL DIVERSITY REQUIREMENTS:
 
-The question MUST strictly adhere to the specified subtopic "{subtopic}" within the topic "{topic}".
-The question MUST follow the "{question_type}" format.
+1. SUBTOPIC FOCUS: The question MUST specifically target "{subtopic}" within {topic}.
+   DO NOT generate questions about other subtopics. The question should test
+   understanding of "{subtopic}" specifically, not general {topic} knowledge.
 
-Examples of {question_type} questions:
+2. QUESTION TYPE: Follow the "{question_type}" format precisely:
 """
-            # Add examples based on question type
-            if question_type == "Output-Based":
-                diversity_guidance += "- Provide code and ask what will be the output\n"
+
+            # Add detailed examples based on question type
+            if question_type == "Output-Based" or "output" in question_type.lower():
+                diversity_guidance += """   - Show a code snippet and ask what it outputs or logs
+   - Focus on the actual result when the code executes
+   - Example: "What will the following code log to the console?"
+"""
+            elif (
+                question_type == "Concept Definition"
+                or "conceptual" in question_type.lower()
+            ):
+                diversity_guidance += """   - Test understanding of definitions, principles, or behaviors
+   - Ask about what a concept IS or HOW it works
+   - Example: "What is a closure in JavaScript?" or "Which statement is true about..."
+"""
+            elif (
+                question_type == "Error Identification"
+                or "error" in question_type.lower()
+            ):
+                diversity_guidance += """   - Present code with a bug or edge case
+   - Ask what error occurs or why it doesn't work as expected
+   - Example: "What error will occur when running this code?"
+"""
+            elif (
+                question_type == "Practical Application"
+                or "practical" in question_type.lower()
+            ):
+                diversity_guidance += """   - Describe a scenario and ask how to implement a solution
+   - Test ability to apply concepts to real problems
+   - Example: "How would you implement..." or "Which pattern should be used for..."
+"""
             elif question_type == "Explanation-Based":
-                diversity_guidance += (
-                    "- Provide code with output and ask for explanation of behavior\n"
-                )
-            elif question_type == "Concept Definition":
-                diversity_guidance += (
-                    "- Ask for the correct definition or explanation of a concept\n"
-                )
+                diversity_guidance += """   - Provide code with output and ask for explanation of behavior
+   - Example: "Why does this code behave this way?"
+"""
             elif question_type == "Behavior Comparison":
-                diversity_guidance += (
-                    "- Compare behaviors of similar constructs or patterns\n"
-                )
-            elif question_type == "Error Identification":
-                diversity_guidance += "- Identify what error will occur in given code\n"
-            elif question_type == "Practical Application":
-                diversity_guidance += (
-                    "- Ask how to apply a concept in a real scenario\n"
-                )
+                diversity_guidance += """   - Compare behaviors of similar constructs or patterns
+   - Example: "What is the difference between let and var?"
+"""
             elif question_type == "Code Completion":
-                diversity_guidance += (
-                    "- Provide incomplete code and ask for completion\n"
-                )
-            elif question_type == "True/False Concept":
-                diversity_guidance += (
-                    "- Present statements where one is true about the concept\n"
-                )
+                diversity_guidance += """   - Provide incomplete code and ask for the correct completion
+   - Example: "What should replace the blank to achieve..."
+"""
+            else:
+                diversity_guidance += f"""   - Follow the "{question_type}" pattern
+   - Ensure the question clearly tests this specific type of knowledge
+"""
+
+            diversity_guidance += f"""
+3. FORMAT CONSTRAINTS:
+   - DO NOT include "A.", "B.", "C.", "D." labels in choice text - use plain text only
+   - Provide exactly 4 choices as plain text strings
+   - Indicate correct answers by INDEX (0, 1, 2, or 3), not letters
+   - For single-answer questions (mcq): correct_answers should be [0], [1], [2], or [3]
+   - For multiple-answer questions (multiselect): correct_answers should be array like [0, 2] or [1, 3]
+   - Set question_type to "mcq" for single answer, "multiselect" for 2+ correct answers
+   - Set difficulty to "{difficulty}"
+
+4. DIFFICULTY LEVEL: {difficulty.upper()}"""
+
+            if difficulty == "easy":
+                diversity_guidance += """
+   - Keep concepts straightforward and common
+   - Use simple, clear code examples with few lines
+   - Test basic understanding, not edge cases
+   - Avoid complex interactions or tricky behaviors
+"""
+            elif difficulty == "hard":
+                diversity_guidance += """
+   - Test edge cases, complex interactions, or tricky behaviors
+   - Use non-trivial code patterns
+   - Require deeper understanding beyond surface-level knowledge
+   - May involve subtle gotchas or advanced concepts
+"""
+            else:  # medium or other
+                diversity_guidance += """
+   - Balance between straightforward and complex concepts
+   - Test solid understanding with moderate complexity
+"""
+
+            diversity_guidance += f"""
+5. AVOID REPETITION:
+   - Generate unique examples that are different from typical patterns
+   - Use diverse code scenarios, not just variations of the same concept
+   - Vary the approach: if subtopic has been tested with output-based questions
+     before, approach it from a different angle
+   - Make the question distinct and novel
+
+IMPORTANT: The question MUST be specifically about "{subtopic}", following the
+"{question_type}" format, at "{difficulty}" difficulty level.
+"""
 
             enhanced_prompt = base_prompt + diversity_guidance
         else:

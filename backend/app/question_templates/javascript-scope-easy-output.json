@@ -1,0 +1,77 @@
+{
+  "subject": "JavaScript",
+  "topic": "Scope",
+  "difficulty": "easy",
+  "template_prompt": "Generate an easy multiple-choice question about {topic} in {subject}. The question should show a code snippet and ask what the output will be. Test basic understanding of variable scope, hoisting, or closure concepts. DO NOT include 'A.', 'B.', 'C.', 'D.' labels in choices - use plain text only. Indicate correct answers by INDEX (0, 1, 2, or 3). Format the question text as HTML with proper <pre><code class=\"language-javascript\"> tags for code. Keep the code simple and straightforward for beginner level.",
+  "example_questions": [
+    {
+      "question_text": "<p>What will be logged to the console when this code runs?</p><pre><code class=\"language-javascript\">var x = 10;\nconsole.log(x);</code></pre>",
+      "choices": [
+        "10",
+        "undefined",
+        "ReferenceError",
+        "x"
+      ],
+      "correct_answers": [0],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "explanation": "The variable x is declared with var and assigned the value 10, so console.log(x) outputs 10."
+    },
+    {
+      "question_text": "<p>What is the output of the following code?</p><pre><code class=\"language-javascript\">function greet() {\n  var message = 'Hello';\n  console.log(message);\n}\n\ngreet();</code></pre>",
+      "choices": [
+        "undefined",
+        "Hello",
+        "ReferenceError",
+        "null"
+      ],
+      "correct_answers": [1],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "explanation": "The variable message is declared inside the function scope and assigned 'Hello', which is then logged to the console."
+    },
+    {
+      "question_text": "<p>What will this code log?</p><pre><code class=\"language-javascript\">let count = 5;\nif (true) {\n  let count = 10;\n  console.log(count);\n}</code></pre>",
+      "choices": [
+        "5",
+        "10",
+        "undefined",
+        "ReferenceError"
+      ],
+      "correct_answers": [1],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "explanation": "The console.log inside the if block accesses the inner count variable (10) due to block scope, not the outer count variable (5)."
+    },
+    {
+      "question_text": "<p>What does the following code output?</p><pre><code class=\"language-javascript\">function outer() {\n  let num = 20;\n  function inner() {\n    console.log(num);\n  }\n  inner();\n}\n\nouter();</code></pre>",
+      "choices": [
+        "undefined",
+        "ReferenceError",
+        "20",
+        "null"
+      ],
+      "correct_answers": [2],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "explanation": "The inner function has access to variables in the outer function's scope (closure), so it can access and log num which is 20."
+    }
+  ],
+  "constraints": {
+    "require_code": true,
+    "code_language": "javascript",
+    "max_question_length": 500,
+    "min_code_lines": 2,
+    "include_explanation": false,
+    "no_labels_in_choices": true,
+    "use_index_for_answers": true
+  }
+}

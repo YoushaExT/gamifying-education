@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { FeatureFlagsListFeatureFlagsForUserData, FeatureFlagsListFeatureFlagsForUserResponse, FeatureFlagsListAllFeatureFlagsData, FeatureFlagsListAllFeatureFlagsResponse, FeatureFlagsUpdateFlagData, FeatureFlagsUpdateFlagResponse, FeatureFlagsCheckFlagStatusData, FeatureFlagsCheckFlagStatusResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MultiplayerGameCreateGameData, MultiplayerGameCreateGameResponse, MultiplayerGameJoinGameData, MultiplayerGameJoinGameResponse, MultiplayerGameGetGameData, MultiplayerGameGetGameResponse, MultiplayerGameGetActiveGameResponse, MultiplayerGameGetGameStateData, MultiplayerGameGetGameStateResponse, MultiplayerGameMarkReadyData, MultiplayerGameMarkReadyResponse, MultiplayerGameGetPlayerHandData, MultiplayerGameGetPlayerHandResponse, MultiplayerGamePlayCardData, MultiplayerGamePlayCardResponse, MultiplayerGameSkipTurnData, MultiplayerGameSkipTurnResponse, MultiplayerGameGetGameResultsData, MultiplayerGameGetGameResultsResponse, PrivateCreateUserData, PrivateCreateUserResponse, QuestionGenerationGenerateQuestionsData, QuestionGenerationGenerateQuestionsResponse, QuestionGenerationListGeneratedQuestionsData, QuestionGenerationListGeneratedQuestionsResponse, QuestionGenerationApproveGeneratedQuestionData, QuestionGenerationApproveGeneratedQuestionResponse, QuestionGenerationRejectGeneratedQuestionData, QuestionGenerationRejectGeneratedQuestionResponse, QuestionGenerationApproveBatchData, QuestionGenerationApproveBatchResponse, QuestionsReadQuestionsData, QuestionsReadQuestionsResponse, QuestionsCreateQuestionData, QuestionsCreateQuestionResponse, QuestionsReadQuestionData, QuestionsReadQuestionResponse, QuestionsUpdateQuestionData, QuestionsUpdateQuestionResponse, QuestionsDeleteQuestionData, QuestionsDeleteQuestionResponse, QuestionTemplatesListTemplatesData, QuestionTemplatesListTemplatesResponse, QuestionTemplatesCreateTemplateData, QuestionTemplatesCreateTemplateResponse, QuestionTemplatesGetTemplateData, QuestionTemplatesGetTemplateResponse, QuestionTemplatesUpdateTemplateData, QuestionTemplatesUpdateTemplateResponse, QuestionTemplatesDeleteTemplateData, QuestionTemplatesDeleteTemplateResponse, QuizzesStartQuizData, QuizzesStartQuizResponse, QuizzesGetAttemptData, QuizzesGetAttemptResponse, QuizzesGetQuizDetailsData, QuizzesGetQuizDetailsResponse, QuizzesSubmitAnswerData, QuizzesSubmitAnswerResponse, QuizzesCompleteQuizData, QuizzesCompleteQuizResponse, QuizzesGetQuizResultsData, QuizzesGetQuizResultsResponse, QuizzesGetQuizHistoryData, QuizzesGetQuizHistoryResponse, SubjectsReadSubjectsData, SubjectsReadSubjectsResponse, TopicsReadTopicsData, TopicsReadTopicsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { FeatureFlagsListFeatureFlagsForUserData, FeatureFlagsListFeatureFlagsForUserResponse, FeatureFlagsListAllFeatureFlagsData, FeatureFlagsListAllFeatureFlagsResponse, FeatureFlagsUpdateFlagData, FeatureFlagsUpdateFlagResponse, FeatureFlagsCheckFlagStatusData, FeatureFlagsCheckFlagStatusResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MediaUploadImageData, MediaUploadImageResponse, MediaGetImageData, MediaGetImageResponse, MediaDeleteImageData, MediaDeleteImageResponse, MultiplayerGameCreateGameData, MultiplayerGameCreateGameResponse, MultiplayerGameJoinGameData, MultiplayerGameJoinGameResponse, MultiplayerGameGetActiveGameResponse, MultiplayerGameGetGameData, MultiplayerGameGetGameResponse, MultiplayerGameGetGameStateData, MultiplayerGameGetGameStateResponse, MultiplayerGameMarkReadyData, MultiplayerGameMarkReadyResponse, MultiplayerGameGetPlayerHandData, MultiplayerGameGetPlayerHandResponse, MultiplayerGamePlayCardData, MultiplayerGamePlayCardResponse, MultiplayerGameSkipTurnData, MultiplayerGameSkipTurnResponse, MultiplayerGameGetGameResultsData, MultiplayerGameGetGameResultsResponse, PrivateCreateUserData, PrivateCreateUserResponse, QuestionGenerationGenerateQuestionsData, QuestionGenerationGenerateQuestionsResponse, QuestionGenerationListGeneratedQuestionsData, QuestionGenerationListGeneratedQuestionsResponse, QuestionGenerationApproveGeneratedQuestionData, QuestionGenerationApproveGeneratedQuestionResponse, QuestionGenerationRejectGeneratedQuestionData, QuestionGenerationRejectGeneratedQuestionResponse, QuestionGenerationApproveBatchData, QuestionGenerationApproveBatchResponse, QuestionsReadQuestionsData, QuestionsReadQuestionsResponse, QuestionsCreateQuestionData, QuestionsCreateQuestionResponse, QuestionsReadQuestionData, QuestionsReadQuestionResponse, QuestionsUpdateQuestionData, QuestionsUpdateQuestionResponse, QuestionsDeleteQuestionData, QuestionsDeleteQuestionResponse, QuestionTemplatesListTemplatesData, QuestionTemplatesListTemplatesResponse, QuestionTemplatesCreateTemplateData, QuestionTemplatesCreateTemplateResponse, QuestionTemplatesGetTemplateData, QuestionTemplatesGetTemplateResponse, QuestionTemplatesUpdateTemplateData, QuestionTemplatesUpdateTemplateResponse, QuestionTemplatesDeleteTemplateData, QuestionTemplatesDeleteTemplateResponse, QuizzesStartQuizData, QuizzesStartQuizResponse, QuizzesGetAttemptData, QuizzesGetAttemptResponse, QuizzesGetQuizDetailsData, QuizzesGetQuizDetailsResponse, QuizzesSubmitAnswerData, QuizzesSubmitAnswerResponse, QuizzesCompleteQuizData, QuizzesCompleteQuizResponse, QuizzesGetQuizResultsData, QuizzesGetQuizResultsResponse, QuizzesGetQuizHistoryData, QuizzesGetQuizHistoryResponse, SubjectsReadSubjectsData, SubjectsReadSubjectsResponse, TopicsReadTopicsData, TopicsReadTopicsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class FeatureFlagsService {
     /**
@@ -315,6 +315,104 @@ export class LoginService {
     }
 }
 
+export class MediaService {
+    /**
+     * Upload Image
+     * Upload an image file.
+     *
+     * Accepts images up to 5MB in JPG, PNG, GIF, WEBP, or SVG format.
+     * Returns the URL where the image can be accessed.
+     *
+     * Args:
+     * current_user: Current authenticated user
+     * file: Image file to upload
+     *
+     * Returns:
+     * Dictionary with 'url' key containing the image URL
+     *
+     * Raises:
+     * HTTPException: If file type or size is invalid
+     * @param data The data for the request.
+     * @param data.formData
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static uploadImage(data: MediaUploadImageData): CancelablePromise<MediaUploadImageResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/media/upload',
+            formData: data.formData,
+            mediaType: 'multipart/form-data',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Image
+     * Retrieve an uploaded image file.
+     *
+     * Args:
+     * filename: Name of the image file
+     *
+     * Returns:
+     * FileResponse with the image
+     *
+     * Raises:
+     * HTTPException: If image not found
+     * @param data The data for the request.
+     * @param data.filename
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static getImage(data: MediaGetImageData): CancelablePromise<MediaGetImageResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/media/{filename}',
+            path: {
+                filename: data.filename
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Image
+     * Delete an uploaded image file.
+     *
+     * Only superusers can delete images.
+     *
+     * Args:
+     * current_user: Current authenticated user
+     * filename: Name of the image file to delete
+     *
+     * Returns:
+     * Success message
+     *
+     * Raises:
+     * HTTPException: If not authorized or image not found
+     * @param data The data for the request.
+     * @param data.filename
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static deleteImage(data: MediaDeleteImageData): CancelablePromise<MediaDeleteImageResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/media/{filename}',
+            path: {
+                filename: data.filename
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
 export class MultiplayerGameService {
     /**
      * Create Game
@@ -359,6 +457,22 @@ export class MultiplayerGameService {
     }
     
     /**
+     * Get Active Game
+     * Get user's active game if they have one.
+     *
+     * Returns the game session where user is participating and status is 'in_progress'.
+     * Used by frontend to show rejoin bar. Returns None if no active game.
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static getActiveGame(): CancelablePromise<MultiplayerGameGetActiveGameResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/multiplayer/games/active'
+        });
+    }
+    
+    /**
      * Get Game
      * Get card game session details.
      * @param data The data for the request.
@@ -376,22 +490,6 @@ export class MultiplayerGameService {
             errors: {
                 422: 'Validation Error'
             }
-        });
-    }
-    
-    /**
-     * Get Active Game
-     * Get user's active game if they have one.
-     *
-     * Returns the game session where user is participating and status is 'in_progress'.
-     * Used by frontend to show rejoin bar. Returns None if no active game.
-     * @returns unknown Successful Response
-     * @throws ApiError
-     */
-    public static getActiveGame(): CancelablePromise<MultiplayerGameGetActiveGameResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/multiplayer/games/active'
         });
     }
     
@@ -609,9 +707,13 @@ export class QuestionGenerationService {
      * Approve Generated Question
      * Approve a generated question and add it to the question bank.
      *
+     * Optionally accepts modified choices and correct_answers to update the question
+     * before approval.
+     *
      * Requires teacher or superuser permissions.
      * @param data The data for the request.
      * @param data.questionId
+     * @param data.requestBody
      * @returns QuestionPublic Successful Response
      * @throws ApiError
      */
@@ -622,6 +724,8 @@ export class QuestionGenerationService {
             path: {
                 question_id: data.questionId
             },
+            body: data.requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: 'Validation Error'
             }

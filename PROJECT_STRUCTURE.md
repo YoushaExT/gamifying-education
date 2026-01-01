@@ -282,7 +282,7 @@ POSTGRES_PASSWORD=changethis
 
 # AI Generation
 OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4o-mini
+OPENAI_MODEL=gpt-5-mini-2025-08-07
 GENERATION_TEMPERATURE=0.7
 
 # Feature Flags

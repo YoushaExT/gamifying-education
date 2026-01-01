@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from enum import Enum
 from typing import Any
 
 from pydantic import EmailStr
@@ -163,11 +164,24 @@ class TopicsPublic(SQLModel):
     count: int
 
 
+# Enums for Question
+class QuestionDifficulty(str, Enum):
+    EASY = "easy"
+    HARD = "hard"
+
+
+class QuestionType(str, Enum):
+    MCQ = "mcq"
+    MULTISELECT = "multiselect"
+
+
 # Shared properties for Question
 class QuestionBase(SQLModel):
     question_text: str = Field(min_length=1, max_length=10000)
-    choices: list[str] = Field(sa_column=Column(JSON))
-    correct_answers: list[str] = Field(sa_column=Column(JSON))
+    choices: list[str] = Field(sa_column=Column(JSON))  # Plain text choices (no labels)
+    correct_answers: list[int] = Field(sa_column=Column(JSON))  # Indices (0-3)
+    difficulty: QuestionDifficulty = Field(max_length=20)
+    question_type: QuestionType = Field(max_length=20)
     subject: str = Field(min_length=1, max_length=100)
     topic: str | None = Field(default=None, max_length=100)
 
@@ -181,7 +195,9 @@ class QuestionCreate(QuestionBase):
 class QuestionUpdate(SQLModel):
     question_text: str | None = Field(default=None, min_length=1, max_length=10000)
     choices: list[str] | None = None
-    correct_answers: list[str] | None = None
+    correct_answers: list[int] | None = None  # Indices (0-3)
+    difficulty: str | None = Field(default=None, max_length=20)
+    question_type: str | None = Field(default=None, max_length=20)
     subject: str | None = Field(default=None, min_length=1, max_length=100)
     topic: str | None = Field(default=None, max_length=100)
 
@@ -190,8 +206,10 @@ class QuestionUpdate(SQLModel):
 class Question(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     question_text: str = Field(min_length=1, max_length=10000)
-    choices: list[str] = Field(sa_column=Column(JSON))
-    correct_answers: list[str] = Field(sa_column=Column(JSON))
+    choices: list[str] = Field(sa_column=Column(JSON))  # Plain text choices (no labels)
+    correct_answers: list[int] = Field(sa_column=Column(JSON))  # Indices (0-3)
+    difficulty: str = Field(max_length=20, default="easy")  # "easy" or "hard"
+    question_type: str = Field(max_length=20, default="mcq")  # "mcq" or "multiselect"
 
     # Foreign keys to Subject and Topic tables
     subject_id: uuid.UUID = Field(
@@ -438,7 +456,7 @@ class QuizAttemptCreate(SQLModel):
 # Properties to receive on answer submission
 class QuizAnswerSubmit(SQLModel):
     question_id: str
-    selected_answers: list[str]  # ["A"] or ["A", "C"] for multi-select
+    selected_answers: list[int]  # [0] or [0, 2] for multi-select (indices)
 
 
 # Database model
@@ -659,7 +677,9 @@ class CardGameSessionWithPlayers(CardGameSessionPublic):
 class CardGameAnswerBase(SQLModel):
     turn_number: int = Field(ge=0)
     card_played: dict[str, Any] = Field(sa_column=Column(JSON))  # Card instance data
-    selected_answers: list[str] = Field(sa_column=Column(JSON))
+    selected_answers: list[int] = Field(
+        sa_column=Column(JSON)
+    )  # Indices of selected choices
     is_correct: bool
     effect_value: int = Field(ge=0)  # Actual value applied (min or max based on answer)
 
@@ -679,7 +699,7 @@ class CardGameAnswer(CardGameAnswerBase, table=True):
 
 class CardGameAnswerCreate(SQLModel):
     card_index: int  # Index of card in player's hand
-    selected_answers: list[str]
+    selected_answers: list[int]  # Indices of selected choices
 
 
 class CardGameAnswerPublic(CardGameAnswerBase):

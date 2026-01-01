@@ -24,6 +24,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 export const Route = createFileRoute("/_layout/quiz/take/$attemptId")({
   component: QuizTakePage,
@@ -35,7 +36,7 @@ function QuizTakePage() {
   const queryClient = useQueryClient()
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-  const [localAnswers, setLocalAnswers] = useState<Record<string, string[]>>({})
+  const [localAnswers, setLocalAnswers] = useState<Record<string, number[]>>({})
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -81,7 +82,7 @@ function QuizTakePage() {
   // Load saved answers from attempt
   useEffect(() => {
     if (attempt?.user_answers) {
-      setLocalAnswers(attempt.user_answers as Record<string, string[]>)
+      setLocalAnswers(attempt.user_answers as Record<string, number[]>)
     }
   }, [attempt])
 
@@ -116,17 +117,27 @@ function QuizTakePage() {
     },
   })
 
-  const handleAnswerChange = (choice: string, checked: boolean) => {
+  const handleAnswerChange = (index: number, checked: boolean) => {
     if (!currentQuestion) return
 
     const questionId = currentQuestion.id
     const currentAnswers = localAnswers[questionId] || []
 
-    let newAnswers: string[]
-    if (checked) {
-      newAnswers = [...currentAnswers, choice]
+    let newAnswers: number[]
+    if (currentQuestion.question_type === "mcq") {
+      // MCQ: single selection
+      newAnswers = checked ? [index] : []
     } else {
-      newAnswers = currentAnswers.filter((a) => a !== choice)
+      // Multiselect: multiple selection
+      if (checked) {
+        if (!currentAnswers.includes(index)) {
+          newAnswers = [...currentAnswers, index]
+        } else {
+          newAnswers = currentAnswers
+        }
+      } else {
+        newAnswers = currentAnswers.filter((a) => a !== index)
+      }
     }
 
     setLocalAnswers({
@@ -316,40 +327,87 @@ function QuizTakePage() {
           {currentQuestion && (
             <div className="space-y-3">
               <Label className="text-base font-semibold">
-                Select your answer(s):
+                {currentQuestion.question_type === "mcq"
+                  ? "Select your answer:"
+                  : "Select all correct answers:"}
               </Label>
-              <div className="space-y-3">
-                {currentQuestion.choices.map((choice) => {
-                  const choiceLabel = choice.split(".")[0].trim() // Extract "A", "B", etc.
-                  const isSelected = currentAnswers.includes(choiceLabel)
 
-                  return (
-                    <div
-                      key={choice}
-                      className={`flex items-start space-x-3 rounded-lg border p-4 transition-colors ${
-                        isSelected
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:bg-muted/50"
-                      }`}
-                    >
-                      <Checkbox
-                        id={`choice-${choice}`}
-                        checked={isSelected}
-                        onCheckedChange={(checked) =>
-                          handleAnswerChange(choiceLabel, checked === true)
-                        }
-                        className="mt-1"
-                      />
-                      <Label
-                        htmlFor={`choice-${choice}`}
-                        className="flex-1 cursor-pointer text-base leading-relaxed"
+              {currentQuestion.question_type === "mcq" ? (
+                <RadioGroup
+                  value={
+                    currentAnswers.length > 0
+                      ? String(currentAnswers[0])
+                      : undefined
+                  }
+                  onValueChange={(value) =>
+                    handleAnswerChange(Number.parseInt(value, 10), true)
+                  }
+                  className="space-y-3"
+                >
+                  {currentQuestion.choices.map((choice, index) => {
+                    const label = String.fromCharCode(65 + index) // A, B, C, D
+                    const isSelected = currentAnswers.includes(index)
+
+                    return (
+                      <div
+                        key={index}
+                        className={`flex items-start space-x-3 rounded-lg border p-4 transition-colors ${
+                          isSelected
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:bg-muted/50"
+                        }`}
                       >
-                        {choice}
-                      </Label>
-                    </div>
-                  )
-                })}
-              </div>
+                        <RadioGroupItem
+                          value={String(index)}
+                          id={`choice-${index}`}
+                          className="mt-1"
+                        />
+                        <Label
+                          htmlFor={`choice-${index}`}
+                          className="flex-1 cursor-pointer text-base leading-relaxed"
+                        >
+                          <span className="font-semibold">{label}.</span>{" "}
+                          {choice}
+                        </Label>
+                      </div>
+                    )
+                  })}
+                </RadioGroup>
+              ) : (
+                <div className="space-y-3">
+                  {currentQuestion.choices.map((choice, index) => {
+                    const label = String.fromCharCode(65 + index) // A, B, C, D
+                    const isSelected = currentAnswers.includes(index)
+
+                    return (
+                      <div
+                        key={index}
+                        className={`flex items-start space-x-3 rounded-lg border p-4 transition-colors ${
+                          isSelected
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:bg-muted/50"
+                        }`}
+                      >
+                        <Checkbox
+                          id={`choice-${index}`}
+                          checked={isSelected}
+                          onCheckedChange={(checked) =>
+                            handleAnswerChange(index, checked === true)
+                          }
+                          className="mt-1"
+                        />
+                        <Label
+                          htmlFor={`choice-${index}`}
+                          className="flex-1 cursor-pointer text-base leading-relaxed"
+                        >
+                          <span className="font-semibold">{label}.</span>{" "}
+                          {choice}
+                        </Label>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
 

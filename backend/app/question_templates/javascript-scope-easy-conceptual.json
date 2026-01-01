@@ -1,0 +1,75 @@
+{
+  "subject": "JavaScript",
+  "topic": "Scope",
+  "difficulty": "easy",
+  "template_prompt": "Generate an easy conceptual multiple-choice question about {topic} in {subject}. Test understanding of definitions, principles, and behaviors related to variable scope, hoisting, or closures. DO NOT ask for code output. DO NOT include 'A.', 'B.', 'C.', 'D.' labels in choices - use plain text only. Indicate correct answers by INDEX (0, 1, 2, or 3). Use plain language appropriate for beginners. May include short code examples to illustrate concepts, but focus on conceptual understanding.",
+  "example_questions": [
+    {
+      "question_text": "<p>What is <strong>scope</strong> in JavaScript?</p>",
+      "choices": [
+        "The region of code where a variable can be accessed",
+        "The order in which functions are called",
+        "The speed at which code executes",
+        "The size of a variable in memory"
+      ],
+      "correct_answers": [0],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "explanation": "Scope refers to the accessibility of variables, functions, and objects in particular parts of your code during runtime."
+    },
+    {
+      "question_text": "<p>Which statement is true about <code>let</code> and <code>const</code> in JavaScript?</p>",
+      "choices": [
+        "They have function scope",
+        "They have block scope",
+        "They have global scope only",
+        "They cannot be used inside functions"
+      ],
+      "correct_answers": [1],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "explanation": "Variables declared with let and const are block-scoped, meaning they are only accessible within the block (curly braces) where they are defined."
+    },
+    {
+      "question_text": "<p>What is a <strong>closure</strong> in JavaScript?</p>",
+      "choices": [
+        "A function that closes the browser window",
+        "A function that has access to its outer function's scope even after the outer function has returned",
+        "A function that cannot access any variables",
+        "A function that ends with a return statement"
+      ],
+      "correct_answers": [1],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "explanation": "A closure is created when a function retains access to variables from its outer (enclosing) scope even after the outer function has finished executing."
+    },
+    {
+      "question_text": "<p>Which of the following are true about <code>var</code> in JavaScript? (Select all that apply)</p>",
+      "choices": [
+        "Variables declared with var are function-scoped",
+        "Variables declared with var are hoisted to the top of their scope",
+        "Variables declared with var cannot be redeclared",
+        "Variables declared with var are block-scoped"
+      ],
+      "correct_answers": [0, 1],
+      "subject": "JavaScript",
+      "topic": "Scope",
+      "difficulty": "easy",
+      "question_type": "multiselect",
+      "explanation": "Variables declared with var are function-scoped (not block-scoped) and are hoisted to the top of their scope. They can be redeclared within the same scope."
+    }
+  ],
+  "constraints": {
+    "require_code": false,
+    "max_question_length": 500,
+    "include_explanation": false,
+    "no_labels_in_choices": true,
+    "use_index_for_answers": true
+  }
+}

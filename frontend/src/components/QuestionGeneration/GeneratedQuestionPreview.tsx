@@ -1,5 +1,11 @@
+import { closestCenter, DndContext, type DragEndEvent } from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
 import { CheckCircle2, Loader2, XCircle } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { QuestionDisplay } from "@/components/Questions/QuestionDisplay"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,16 +17,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { DraggableChoice } from "../Questions/DraggableChoice"
 import { RejectDialog } from "./RejectDialog"
+
+interface ChoiceItem {
+  id: string
+  text: string
+}
 
 export interface GeneratedQuestionData {
   id: string
   question_data: {
     question_text: string
     choices: string[]
-    correct_answers: string[]
+    correct_answers: number[] // Changed from string[] to number[]
     subject: string
     topic?: string
+    difficulty?: string
+    question_type?: string
   }
   status: string
   validation_score?: number
@@ -33,7 +47,10 @@ export interface GeneratedQuestionData {
 interface GeneratedQuestionPreviewProps {
   question: GeneratedQuestionData
   index: number
-  onAccept: (id: string) => Promise<void>
+  onAccept: (
+    id: string,
+    modifiedData?: { choices: string[]; correct_answers: number[] },
+  ) => Promise<void>
   onReject: (id: string, reason: string) => Promise<void>
   isProcessing: boolean
 }
@@ -49,12 +66,59 @@ export function GeneratedQuestionPreview({
   const [isAccepting, setIsAccepting] = useState(false)
   const [isRejecting, setIsRejecting] = useState(false)
 
+  // Local state for drag-drop reordering
+  const [choices, setChoices] = useState<ChoiceItem[]>([])
+  const [correctAnswers, setCorrectAnswers] = useState<number[]>([])
+
   const { question_data, validation_score, validation_feedback } = question
+
+  // Initialize choices and correct answers from question data
+  useEffect(() => {
+    const initialChoices = question_data.choices.map((choice, idx) => ({
+      id: `choice-${idx + 1}`,
+      text: choice,
+    }))
+    setChoices(initialChoices)
+    setCorrectAnswers(question_data.correct_answers)
+  }, [question_data.choices, question_data.correct_answers])
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) return
+
+    const oldIndex = choices.findIndex((c) => c.id === active.id)
+    const newIndex = choices.findIndex((c) => c.id === over.id)
+
+    // Reorder choices
+    const newChoices = arrayMove(choices, oldIndex, newIndex)
+    setChoices(newChoices)
+
+    // Update correct_answers indices
+    const newCorrectAnswers = correctAnswers.map((idx) => {
+      if (idx === oldIndex) return newIndex
+      if (idx > oldIndex && idx <= newIndex) return idx - 1
+      if (idx < oldIndex && idx >= newIndex) return idx + 1
+      return idx
+    })
+    setCorrectAnswers(newCorrectAnswers)
+  }
+
+  const handleChoiceTextChange = (index: number, text: string) => {
+    const newChoices = [...choices]
+    newChoices[index].text = text
+    setChoices(newChoices)
+  }
 
   const handleAccept = async () => {
     setIsAccepting(true)
     try {
-      await onAccept(question.id)
+      // Pass modified choices and correct_answers to onAccept
+      const modifiedData = {
+        choices: choices.map((c) => c.text),
+        correct_answers: correctAnswers,
+      }
+      await onAccept(question.id, modifiedData)
     } finally {
       setIsAccepting(false)
     }
@@ -76,8 +140,6 @@ export function GeneratedQuestionPreview({
     if (score >= 60) return "bg-yellow-100 text-yellow-700"
     return "bg-red-100 text-red-700"
   }
-
-  const choiceLetters = ["A", "B", "C", "D"]
 
   return (
     <>
@@ -138,39 +200,40 @@ export function GeneratedQuestionPreview({
             <QuestionDisplay html={question_data.question_text} />
           </div>
 
-          {/* Choices */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Choices:</p>
-            {question_data.choices.map((choice, idx) => {
-              const choiceLetter = choiceLetters[idx]
-              const isCorrect =
-                question_data.correct_answers.includes(choiceLetter)
+          {/* Choices with Drag-Drop */}
+          <div className="space-y-3">
+            <p className="text-sm font-medium">
+              Choices{" "}
+              <span className="text-sm text-muted-foreground ml-2">
+                (Drag to reorder)
+              </span>
+            </p>
 
-              return (
-                <div
-                  key={idx}
-                  className={`flex items-center gap-2 p-2 rounded-md border ${
-                    isCorrect
-                      ? "bg-green-50 border-green-200"
-                      : "bg-white border-gray-200"
-                  }`}
-                >
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                      isCorrect
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {choiceLetter}
-                  </span>
-                  <span className="flex-1 text-sm">{choice}</span>
-                  {isCorrect && (
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  )}
+            <DndContext
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={choices.map((c) => c.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2">
+                  {choices.map((choice, index) => (
+                    <DraggableChoice
+                      key={choice.id}
+                      id={choice.id}
+                      index={index}
+                      text={choice.text}
+                      isCorrect={correctAnswers.includes(index)}
+                      onTextChange={(text) =>
+                        handleChoiceTextChange(index, text)
+                      }
+                      onCorrectChange={() => {}} // Read-only correct answers in preview
+                    />
+                  ))}
                 </div>
-              )
-            })}
+              </SortableContext>
+            </DndContext>
           </div>
 
           {/* Validation Feedback */}

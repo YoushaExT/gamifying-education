@@ -438,7 +438,7 @@ def update_quiz_attempt_answer(
     session: Session,
     attempt: QuizAttempt,
     question_id: str,
-    selected_answers: list[str],
+    selected_answers: list[int],
 ) -> QuizAttempt:
     """Update a quiz attempt with a user's answer to a question."""
     # Update the user_answers dict
