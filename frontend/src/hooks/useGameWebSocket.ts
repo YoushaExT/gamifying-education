@@ -394,7 +394,7 @@ export function useGameWebSocket({
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
     const backendHost =
       import.meta.env.VITE_API_URL?.replace(/^https?:\/\//, "") ||
-      "localhost:8000"
+      window.location.host
     const wsUrl = `${protocol}//${backendHost}/api/v1/multiplayer/games/${gameId}/ws`
 
     console.log("Connecting to WebSocket:", wsUrl)

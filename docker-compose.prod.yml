@@ -20,6 +20,10 @@ services:
       # HTTP to HTTPS redirect
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      # WebSocket timeouts - keep connections alive
+      - --entrypoints.websecure.transport.respondingTimeouts.idleTimeout=3600s
+      - --entrypoints.websecure.transport.respondingTimeouts.readTimeout=3600s
+      - --entrypoints.websecure.transport.respondingTimeouts.writeTimeout=3600s
       # Let's Encrypt
       - --certificatesresolvers.letsencrypt.acme.email=${ADMIN_EMAIL}
       - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
@@ -88,7 +92,8 @@ services:
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
       - "traefik.http.routers.backend.service=backend"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
-      # WebSocket support
+      # WebSocket support - increase timeouts to prevent disconnection
+      - "traefik.http.services.backend.loadbalancer.responseforwarding.flushinterval=1ms"
       - "traefik.http.routers.backend.middlewares=backend-headers"
       - "traefik.http.middlewares.backend-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
     logging:
