@@ -357,7 +357,7 @@ export class MediaService {
      * filename: Name of the image file
      *
      * Returns:
-     * FileResponse with the image
+     * FileResponse or StreamingResponse with the image
      *
      * Raises:
      * HTTPException: If image not found
