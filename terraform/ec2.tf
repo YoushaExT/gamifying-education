@@ -79,8 +79,9 @@ resource "aws_instance" "main" {
     Name = "${var.project_name}-instance"
   }
 
-  # Wait for RDS before running user_data
+  # Wait for RDS and S3 data source before running user_data
   depends_on = [
-    aws_db_instance.main
+    aws_db_instance.main,
+    data.aws_s3_bucket.media
   ]
 }

@@ -136,15 +136,12 @@ class LocalStorage(MediaStorage):
 class S3Storage(MediaStorage):
     """S3 storage backend for production."""
 
-    def __init__(
-        self, bucket_name: str, region: str = "us-east-1", base_url: str | None = None
-    ):
+    def __init__(self, bucket_name: str, region: str = "us-east-1"):
         """Initialize S3 storage.
 
         Args:
             bucket_name: S3 bucket name
             region: AWS region
-            base_url: Optional base URL for serving files (e.g., CloudFront)
         """
         try:
             import boto3  # type: ignore[import-not-found]  # noqa: I001
@@ -158,7 +155,6 @@ class S3Storage(MediaStorage):
 
         self.bucket_name = bucket_name
         self.region = region
-        self.base_url = base_url
         self.s3_client = boto3.client("s3", region_name=region)
 
         logger.info(
@@ -188,11 +184,9 @@ class S3Storage(MediaStorage):
 
             logger.info(f"File uploaded to S3: {filename}")
 
-            # Return URL
-            if self.base_url:
-                return f"{self.base_url}/{filename}"
-            else:
-                return f"https://{self.bucket_name}.s3.{self.region}.amazonaws.com/{filename}"
+            # Return API endpoint URL (not direct S3 URL)
+            # The API will serve the file using IAM credentials
+            return f"/api/v1/media/{filename}"
 
         except Exception as e:
             logger.error(f"Failed to upload file to S3: {e}", exc_info=True)
