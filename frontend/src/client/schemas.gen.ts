@@ -541,12 +541,12 @@ export const CardGameSessionWithPlayersSchema = {
         guest_shield: {
             type: 'integer',
             title: 'Guest Shield',
-            default: 0
+            default: 3
         },
         max_health: {
             type: 'integer',
             title: 'Max Health',
-            default: 30
+            default: 10
         },
         host_hand: {
             items: {

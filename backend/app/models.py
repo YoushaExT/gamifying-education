@@ -601,8 +601,12 @@ class CardGameSessionBase(SQLModel):
     host_health: int = Field(default=10)
     guest_health: int = Field(default=10)
     host_shield: int = Field(default=0)
-    guest_shield: int = Field(default=0)
-    max_health: int = Field(default=30)
+    guest_shield: int = Field(
+        default=3
+    )  # Guest starts with shield for turn order balance
+    max_health: int = Field(
+        default=10
+    )  # Changed from 30 - health caps at starting value
     # Card state (JSON arrays of card instances with question_id)
     host_hand: list[dict[str, Any]] = Field(
         default_factory=list, sa_column=Column(JSON)
