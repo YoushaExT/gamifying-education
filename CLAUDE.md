@@ -104,7 +104,7 @@ alembic downgrade -1
 alembic history
 ```
 
-**Fallback: If local venv fails** (e.g., no .env file or database connection issues):
+**Fallback: If local venv fails** (e.g., no .env file or database connection issues - if migration is generated inside docker, make sure to copy it):
 
 ```bash
 # Run migration inside Docker container with explicit PYTHONPATH

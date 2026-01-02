@@ -93,7 +93,7 @@ function QuizStartPage() {
     if (selectedSubjects.length === subjects.length) {
       setSelectedSubjects([])
     } else {
-      setSelectedSubjects(subjects.map((s: SubjectPublic) => s.name))
+      setSelectedSubjects(subjects.map((s) => s.name))
     }
   }
 
@@ -142,7 +142,7 @@ function QuizStartPage() {
               </Button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {subjects.map((subject: SubjectPublic) => (
+              {subjects.map((subject) => (
                 <div
                   key={subject.id}
                   className="flex items-center space-x-2 border rounded-md p-3 hover:bg-accent"
@@ -178,7 +178,7 @@ function QuizStartPage() {
                 Leave empty to include all topics from selected subjects
               </p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {filteredTopics.map((topic: TopicPublic) => (
+                {filteredTopics.map((topic) => (
                   <div
                     key={topic.id}
                     className="flex items-center space-x-2 border rounded-md p-3 hover:bg-accent"

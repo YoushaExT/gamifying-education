@@ -19,8 +19,10 @@ import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutQuizStartRouteImport } from './routes/_layout/quiz/start'
+import { Route as LayoutGameHistoryRouteImport } from './routes/_layout/game/history'
 import { Route as LayoutGameCreateRouteImport } from './routes/_layout/game/create'
 import { Route as LayoutAdminQuestionsRouteImport } from './routes/_layout/admin/questions'
+import { Route as LayoutAdminGamesRouteImport } from './routes/_layout/admin/games'
 import { Route as LayoutAdminFeatureFlagsRouteImport } from './routes/_layout/admin/feature-flags'
 import { Route as LayoutAdminAiGenerateRouteImport } from './routes/_layout/admin/ai-generate'
 import { Route as LayoutQuizTakeAttemptIdRouteImport } from './routes/_layout/quiz/take.$attemptId'
@@ -78,6 +80,11 @@ const LayoutQuizStartRoute = LayoutQuizStartRouteImport.update({
   path: '/quiz/start',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutGameHistoryRoute = LayoutGameHistoryRouteImport.update({
+  id: '/game/history',
+  path: '/game/history',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutGameCreateRoute = LayoutGameCreateRouteImport.update({
   id: '/game/create',
   path: '/game/create',
@@ -86,6 +93,11 @@ const LayoutGameCreateRoute = LayoutGameCreateRouteImport.update({
 const LayoutAdminQuestionsRoute = LayoutAdminQuestionsRouteImport.update({
   id: '/questions',
   path: '/questions',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
+const LayoutAdminGamesRoute = LayoutAdminGamesRouteImport.update({
+  id: '/games',
+  path: '/games',
   getParentRoute: () => LayoutAdminRoute,
 } as any)
 const LayoutAdminFeatureFlagsRoute = LayoutAdminFeatureFlagsRouteImport.update({
@@ -136,8 +148,10 @@ export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/admin/ai-generate': typeof LayoutAdminAiGenerateRoute
   '/admin/feature-flags': typeof LayoutAdminFeatureFlagsRoute
+  '/admin/games': typeof LayoutAdminGamesRoute
   '/admin/questions': typeof LayoutAdminQuestionsRoute
   '/game/create': typeof LayoutGameCreateRoute
+  '/game/history': typeof LayoutGameHistoryRoute
   '/quiz/start': typeof LayoutQuizStartRoute
   '/game/lobby/$gameId': typeof LayoutGameLobbyGameIdRoute
   '/game/play/$gameId': typeof LayoutGamePlayGameIdRoute
@@ -156,8 +170,10 @@ export interface FileRoutesByTo {
   '/': typeof LayoutIndexRoute
   '/admin/ai-generate': typeof LayoutAdminAiGenerateRoute
   '/admin/feature-flags': typeof LayoutAdminFeatureFlagsRoute
+  '/admin/games': typeof LayoutAdminGamesRoute
   '/admin/questions': typeof LayoutAdminQuestionsRoute
   '/game/create': typeof LayoutGameCreateRoute
+  '/game/history': typeof LayoutGameHistoryRoute
   '/quiz/start': typeof LayoutQuizStartRoute
   '/game/lobby/$gameId': typeof LayoutGameLobbyGameIdRoute
   '/game/play/$gameId': typeof LayoutGamePlayGameIdRoute
@@ -178,8 +194,10 @@ export interface FileRoutesById {
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/admin/ai-generate': typeof LayoutAdminAiGenerateRoute
   '/_layout/admin/feature-flags': typeof LayoutAdminFeatureFlagsRoute
+  '/_layout/admin/games': typeof LayoutAdminGamesRoute
   '/_layout/admin/questions': typeof LayoutAdminQuestionsRoute
   '/_layout/game/create': typeof LayoutGameCreateRoute
+  '/_layout/game/history': typeof LayoutGameHistoryRoute
   '/_layout/quiz/start': typeof LayoutQuizStartRoute
   '/_layout/game/lobby/$gameId': typeof LayoutGameLobbyGameIdRoute
   '/_layout/game/play/$gameId': typeof LayoutGamePlayGameIdRoute
@@ -200,8 +218,10 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/ai-generate'
     | '/admin/feature-flags'
+    | '/admin/games'
     | '/admin/questions'
     | '/game/create'
+    | '/game/history'
     | '/quiz/start'
     | '/game/lobby/$gameId'
     | '/game/play/$gameId'
@@ -220,8 +240,10 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/ai-generate'
     | '/admin/feature-flags'
+    | '/admin/games'
     | '/admin/questions'
     | '/game/create'
+    | '/game/history'
     | '/quiz/start'
     | '/game/lobby/$gameId'
     | '/game/play/$gameId'
@@ -241,8 +263,10 @@ export interface FileRouteTypes {
     | '/_layout/'
     | '/_layout/admin/ai-generate'
     | '/_layout/admin/feature-flags'
+    | '/_layout/admin/games'
     | '/_layout/admin/questions'
     | '/_layout/game/create'
+    | '/_layout/game/history'
     | '/_layout/quiz/start'
     | '/_layout/game/lobby/$gameId'
     | '/_layout/game/play/$gameId'
@@ -332,6 +356,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutQuizStartRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/game/history': {
+      id: '/_layout/game/history'
+      path: '/game/history'
+      fullPath: '/game/history'
+      preLoaderRoute: typeof LayoutGameHistoryRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/game/create': {
       id: '/_layout/game/create'
       path: '/game/create'
@@ -344,6 +375,13 @@ declare module '@tanstack/react-router' {
       path: '/questions'
       fullPath: '/admin/questions'
       preLoaderRoute: typeof LayoutAdminQuestionsRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/games': {
+      id: '/_layout/admin/games'
+      path: '/games'
+      fullPath: '/admin/games'
+      preLoaderRoute: typeof LayoutAdminGamesRouteImport
       parentRoute: typeof LayoutAdminRoute
     }
     '/_layout/admin/feature-flags': {
@@ -401,12 +439,14 @@ declare module '@tanstack/react-router' {
 interface LayoutAdminRouteChildren {
   LayoutAdminAiGenerateRoute: typeof LayoutAdminAiGenerateRoute
   LayoutAdminFeatureFlagsRoute: typeof LayoutAdminFeatureFlagsRoute
+  LayoutAdminGamesRoute: typeof LayoutAdminGamesRoute
   LayoutAdminQuestionsRoute: typeof LayoutAdminQuestionsRoute
 }
 
 const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
   LayoutAdminAiGenerateRoute: LayoutAdminAiGenerateRoute,
   LayoutAdminFeatureFlagsRoute: LayoutAdminFeatureFlagsRoute,
+  LayoutAdminGamesRoute: LayoutAdminGamesRoute,
   LayoutAdminQuestionsRoute: LayoutAdminQuestionsRoute,
 }
 
@@ -419,6 +459,7 @@ interface LayoutRouteChildren {
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutGameCreateRoute: typeof LayoutGameCreateRoute
+  LayoutGameHistoryRoute: typeof LayoutGameHistoryRoute
   LayoutQuizStartRoute: typeof LayoutQuizStartRoute
   LayoutGameLobbyGameIdRoute: typeof LayoutGameLobbyGameIdRoute
   LayoutGamePlayGameIdRoute: typeof LayoutGamePlayGameIdRoute
@@ -432,6 +473,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutGameCreateRoute: LayoutGameCreateRoute,
+  LayoutGameHistoryRoute: LayoutGameHistoryRoute,
   LayoutQuizStartRoute: LayoutQuizStartRoute,
   LayoutGameLobbyGameIdRoute: LayoutGameLobbyGameIdRoute,
   LayoutGamePlayGameIdRoute: LayoutGamePlayGameIdRoute,

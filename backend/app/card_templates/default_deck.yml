@@ -10,23 +10,23 @@ cards:
     description: "Hurl a blazing fireball at your opponent"
     type: "basic_damage"
     effect:
-      min_value: 2
-      max_value: 5
+      min_value: 1
+      max_value: 6
 
   - key: "ice_shard"
     name: "Ice Shard"
     description: "Launch a piercing shard of ice"
     type: "basic_damage"
     effect:
-      min_value: 3
-      max_value: 4
+      min_value: 2
+      max_value: 5
 
   - key: "lightning_bolt"
     name: "Lightning Bolt"
     description: "Strike with the power of lightning"
     type: "basic_damage"
     effect:
-      min_value: 2
+      min_value: 1
       max_value: 6
 
   - key: "shadow_strike"
@@ -34,7 +34,7 @@ cards:
     description: "Attack from the shadows"
     type: "basic_damage"
     effect:
-      min_value: 3
+      min_value: 2
       max_value: 5
 
   - key: "arcane_blast"
@@ -42,7 +42,7 @@ cards:
     description: "Release a burst of pure arcane energy"
     type: "basic_damage"
     effect:
-      min_value: 2
+      min_value: 3
       max_value: 4
 
   # ==================== Shield Cards ====================
@@ -51,15 +51,15 @@ cards:
     description: "Raise a protective barrier"
     type: "basic_shield"
     effect:
-      min_value: 2
-      max_value: 4
+      min_value: 1
+      max_value: 5
 
   - key: "arcane_barrier"
     name: "Arcane Barrier"
     description: "Conjure a magical shield"
     type: "basic_shield"
     effect:
-      min_value: 2
+      min_value: 1
       max_value: 5
 
   - key: "frost_armor"
@@ -67,7 +67,7 @@ cards:
     description: "Encase yourself in protective ice"
     type: "basic_shield"
     effect:
-      min_value: 3
+      min_value: 2
       max_value: 4
 
   # ==================== Heal Cards ====================
@@ -77,7 +77,7 @@ cards:
     type: "basic_heal"
     effect:
       min_value: 2
-      max_value: 4
+      max_value: 7
 
   - key: "regeneration"
     name: "Regeneration"
@@ -85,7 +85,7 @@ cards:
     type: "basic_heal"
     effect:
       min_value: 2
-      max_value: 5
+      max_value: 7
 
   - key: "natures_blessing"
     name: "Nature's Blessing"
@@ -93,27 +93,27 @@ cards:
     type: "basic_heal"
     effect:
       min_value: 3
-      max_value: 4
+      max_value: 6
 
 # ==================== Deck Composition ====================
-# Total cards should be around 25-30 for a balanced game
+# Total: 28 cards (50% damage, 25% shield, 25% heal)
 deck:
   name: "default"
   is_default: true
   composition:
-    # Damage cards (12 total - most common)
+    # Damage cards (14 total - 50%)
     - card_key: "fireball"
       count: 3
     - card_key: "ice_shard"
       count: 3
     - card_key: "lightning_bolt"
-      count: 2
+      count: 3
     - card_key: "shadow_strike"
-      count: 2
+      count: 3
     - card_key: "arcane_blast"
       count: 2
 
-    # Shield cards (7 total)
+    # Shield cards (7 total - 25%)
     - card_key: "shield_wall"
       count: 3
     - card_key: "arcane_barrier"
@@ -121,9 +121,9 @@ deck:
     - card_key: "frost_armor"
       count: 2
 
-    # Heal cards (6 total - least common)
+    # Heal cards (7 total - 25%)
     - card_key: "healing_potion"
-      count: 2
+      count: 3
     - card_key: "regeneration"
       count: 2
     - card_key: "natures_blessing"

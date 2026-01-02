@@ -265,6 +265,208 @@ class CardGameService:
 
         return is_correct, effect_value
 
+    def resolve_answer_with_ability(
+        self,
+        player: str,
+        card: dict[str, Any],
+        question1: Question,
+        selected_answers1: list[int],
+        question2: Question | None = None,
+        selected_answers2: list[int] | None = None,
+    ) -> tuple[bool, bool, int, bool]:
+        """
+        Resolve answers with special ability (double question mechanic).
+
+        Args:
+            player: "host" or "guest"
+            card: The card that was played
+            question1: First question
+            selected_answers1: Player's answers to question 1
+            question2: Second question (if first was correct)
+            selected_answers2: Player's answers to question 2 (if applicable)
+
+        Returns:
+            Tuple of (is_first_correct, is_second_correct, effect_value, is_reversed)
+        """
+        game = self.get_game()
+        if not game:
+            return False, False, 0, False
+
+        # Check first answer
+        selected_sorted1 = sorted(selected_answers1)
+        correct_sorted1 = sorted(question1.correct_answers)
+        is_first_correct = selected_sorted1 == correct_sorted1
+
+        logger.info(
+            f"First question - Selected: {selected_sorted1}, Correct: {correct_sorted1}"
+        )
+
+        # If first question is wrong, apply reverse effect immediately
+        if not is_first_correct:
+            effect_data = card.get("effect_data", {})
+            min_value = effect_data.get("min_value", 1)
+            effect_value = min_value
+
+            # Apply REVERSE effect
+            self._apply_reverse_effect(player, card.get("card_type", ""), effect_value)
+
+            # Record first answer
+            self._record_ability_answer(
+                player, card, question1, selected_answers1, False, effect_value, True
+            )
+
+            # Deactivate ability (used up)
+            self._deactivate_ability(player)
+
+            return False, False, effect_value, True
+
+        # First question correct - check second question
+        if question2 and selected_answers2 is not None:
+            selected_sorted2 = sorted(selected_answers2)
+            correct_sorted2 = sorted(question2.correct_answers)
+            is_second_correct = selected_sorted2 == correct_sorted2
+
+            logger.info(
+                f"Second question - Selected: {selected_sorted2}, Correct: {correct_sorted2}"
+            )
+
+            if is_second_correct:
+                # BOTH CORRECT - Double effect!
+                effect_data = card.get("effect_data", {})
+                max_value = effect_data.get("max_value", 3)
+                effect_value = max_value * 2  # DOUBLE!
+
+                # Apply normal effect (doubled)
+                self._apply_normal_effect(
+                    player, card.get("card_type", ""), effect_value
+                )
+
+                # Record both answers
+                self._record_ability_answer(
+                    player,
+                    card,
+                    question1,
+                    selected_answers1,
+                    True,
+                    effect_value,
+                    False,
+                )
+                self._record_ability_answer(
+                    player,
+                    card,
+                    question2,
+                    selected_answers2,
+                    True,
+                    effect_value,
+                    False,
+                )
+
+                self._deactivate_ability(player)
+
+                return True, True, effect_value, False
+            else:
+                # Second question WRONG - Reverse effect
+                effect_data = card.get("effect_data", {})
+                min_value = effect_data.get("min_value", 1)
+                effect_value = min_value
+
+                self._apply_reverse_effect(
+                    player, card.get("card_type", ""), effect_value
+                )
+
+                # Record both answers
+                self._record_ability_answer(
+                    player, card, question1, selected_answers1, True, 0, False
+                )
+                self._record_ability_answer(
+                    player,
+                    card,
+                    question2,
+                    selected_answers2,
+                    False,
+                    effect_value,
+                    True,
+                )
+
+                self._deactivate_ability(player)
+
+                return True, False, effect_value, True
+
+        # Shouldn't reach here
+        raise ValueError("Invalid state: first question correct but no second question")
+
+    def _apply_normal_effect(
+        self, player: str, card_type: str, effect_value: int
+    ) -> None:
+        """Apply card effect normally (to intended target)."""
+        opponent = "guest" if player == "host" else "host"
+
+        if card_type == "basic_damage":
+            self._apply_damage(opponent, effect_value)
+        elif card_type == "basic_shield":
+            self._apply_shield(player, effect_value)
+        elif card_type == "basic_heal":
+            self._apply_heal(player, effect_value)
+
+    def _apply_reverse_effect(
+        self, player: str, card_type: str, effect_value: int
+    ) -> None:
+        """Apply card effect in REVERSE (damage to self, shield/heal to opponent)."""
+        opponent = "guest" if player == "host" else "host"
+
+        if card_type == "basic_damage":
+            self._apply_damage(player, effect_value)  # Damage to SELF
+        elif card_type == "basic_shield":
+            self._apply_shield(opponent, effect_value)  # Shield to OPPONENT
+        elif card_type == "basic_heal":
+            self._apply_heal(opponent, effect_value)  # Heal to OPPONENT
+
+    def _deactivate_ability(self, player: str) -> None:
+        """Deactivate ability after use."""
+        game = self.get_game()
+        if not game:
+            return
+
+        if player == "host":
+            game.host_ability_active = False
+            flag_modified(game, "host_ability_active")
+        else:
+            game.guest_ability_active = False
+            flag_modified(game, "guest_ability_active")
+
+        self.session.add(game)
+
+    def _record_ability_answer(
+        self,
+        player: str,
+        card: dict[str, Any],
+        question: Question,
+        selected_answers: list[int],
+        is_correct: bool,
+        effect_value: int,
+        _is_reversed: bool,
+    ) -> None:
+        """Record an answer from ability usage.
+
+        Args:
+            _is_reversed: Whether effect was reversed (unused, for future tracking).
+        """
+        game = self.get_game()
+        if not game:
+            return
+
+        answer = CardGameAnswer(
+            game_session_id=self.game_id,
+            user_id=game.host_id if player == "host" else game.guest_id,
+            question_id=question.id,
+            turn_number=game.turn_number,
+            card_played=card,
+            selected_answers=selected_answers,
+            is_correct=is_correct,
+            effect_value=effect_value,
+        )
+        self.session.add(answer)
+
     def _apply_damage(self, target: str, amount: int) -> None:
         """Apply damage to a player (shield absorbs first)."""
         game = self.get_game()
@@ -337,6 +539,21 @@ class CardGameService:
         game.current_turn = next_player
         game.turn_number += 1
 
+        # Decrement ability cooldowns for both players
+        if game.host_ability_cooldown > 0:
+            game.host_ability_cooldown -= 1
+            flag_modified(game, "host_ability_cooldown")
+            logger.info(
+                f"Host ability cooldown decreased to {game.host_ability_cooldown}"
+            )
+
+        if game.guest_ability_cooldown > 0:
+            game.guest_ability_cooldown -= 1
+            flag_modified(game, "guest_ability_cooldown")
+            logger.info(
+                f"Guest ability cooldown decreased to {game.guest_ability_cooldown}"
+            )
+
         # Check if deck is empty - apply fatigue damage
         if not game.deck:
             game.fatigue_damage += 1
@@ -363,6 +580,24 @@ class CardGameService:
         Returns:
             Turn end result.
         """
+        game = self.get_game()
+        if not game:
+            return {"error": "Game not found"}
+
+        # Waste ability if active
+        current_player = game.current_turn
+        if current_player == "host" and game.host_ability_active:
+            game.host_ability_active = False
+            flag_modified(game, "host_ability_active")
+            logger.info("Host ability wasted due to skip turn")
+        elif current_player == "guest" and game.guest_ability_active:
+            game.guest_ability_active = False
+            flag_modified(game, "guest_ability_active")
+            logger.info("Guest ability wasted due to skip turn")
+
+        self.session.add(game)
+        self.session.commit()
+
         return self.end_turn()
 
     def check_game_over(self) -> str | None:
@@ -377,21 +612,39 @@ class CardGameService:
             return None
 
         if game.host_health <= 0:
+            logger.info(
+                f"Game {self.game_id} ending: Host health reached 0, Guest wins. "
+                f"Host HP: {game.host_health}, Guest HP: {game.guest_health}"
+            )
             game.winner = "guest"
             game.status = "completed"
             game.end_reason = "health_zero"
             game.completed_at = datetime.utcnow()
             self.session.add(game)
             self.session.commit()
+            self.session.refresh(game)
+            logger.info(
+                f"Game {self.game_id} marked as completed: "
+                f"status={game.status}, winner={game.winner}, end_reason={game.end_reason}"
+            )
             return "guest"
 
         if game.guest_health <= 0:
+            logger.info(
+                f"Game {self.game_id} ending: Guest health reached 0, Host wins. "
+                f"Host HP: {game.host_health}, Guest HP: {game.guest_health}"
+            )
             game.winner = "host"
             game.status = "completed"
             game.end_reason = "health_zero"
             game.completed_at = datetime.utcnow()
             self.session.add(game)
             self.session.commit()
+            self.session.refresh(game)
+            logger.info(
+                f"Game {self.game_id} marked as completed: "
+                f"status={game.status}, winner={game.winner}, end_reason={game.end_reason}"
+            )
             return "host"
 
         return None
@@ -416,6 +669,11 @@ class CardGameService:
         # Determine winner (opposite of forfeiter)
         winner = "guest" if player == "host" else "host"
 
+        logger.info(
+            f"Game {self.game_id} being forfeited by {player}. "
+            f"Current status: {game.status}, Winner will be: {winner}"
+        )
+
         # Update game state
         game.winner = winner
         game.status = "completed"
@@ -426,7 +684,10 @@ class CardGameService:
         self.session.commit()
         self.session.refresh(game)
 
-        logger.info(f"Game {self.game_id} forfeited by {player}, winner: {winner}")
+        logger.info(
+            f"Game {self.game_id} marked as completed after forfeit: "
+            f"status={game.status}, winner={game.winner}, end_reason={game.end_reason}"
+        )
 
         return winner
 
@@ -458,6 +719,8 @@ class CardGameService:
                 "shield": game.host_shield,
                 "hand_count": len(game.host_hand),
                 "is_current_turn": game.current_turn == "host",
+                "ability_cooldown": game.host_ability_cooldown,
+                "ability_active": game.host_ability_active,
             },
             "guest": {
                 "id": str(game.guest_id) if game.guest_id else None,
@@ -466,6 +729,8 @@ class CardGameService:
                 "shield": game.guest_shield,
                 "hand_count": len(game.guest_hand),
                 "is_current_turn": game.current_turn == "guest",
+                "ability_cooldown": game.guest_ability_cooldown,
+                "ability_active": game.guest_ability_active,
             }
             if game.guest_id
             else None,
@@ -502,6 +767,42 @@ class CardGameService:
             }
             for card in hand
         ]
+
+    def activate_ability(self, player: str) -> dict[str, Any]:
+        """Activate a player's special ability."""
+        game = self.get_game()
+        if not game:
+            raise ValueError("Game not found")
+
+        cooldown = (
+            game.host_ability_cooldown
+            if player == "host"
+            else game.guest_ability_cooldown
+        )
+        is_active = (
+            game.host_ability_active if player == "host" else game.guest_ability_active
+        )
+
+        if cooldown > 0:
+            raise ValueError(f"Ability on cooldown for {cooldown} turns")
+        if is_active:
+            raise ValueError("Ability already active")
+
+        # Activate and start cooldown immediately
+        if player == "host":
+            game.host_ability_active = True
+            game.host_ability_cooldown = 4
+        else:
+            game.guest_ability_active = True
+            game.guest_ability_cooldown = 4
+
+        self.session.add(game)
+        self.session.commit()
+        self.session.refresh(game)
+
+        logger.info(f"{player} activated special ability, cooldown set to 4 turns")
+
+        return {"success": True, "player": player, "cooldown": 4}
 
     async def start_game_flow(self, broadcast_fn: Any) -> None:
         """

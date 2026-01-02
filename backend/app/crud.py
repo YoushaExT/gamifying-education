@@ -1,7 +1,7 @@
 import random
 import string
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import desc, func
@@ -724,3 +724,236 @@ def get_card_game_answers(
         statement = statement.where(CardGameAnswer.turn_number == turn_number)
 
     return list(session.exec(statement).all())
+
+
+def cleanup_abandoned_games(
+    *, session: Session, hours_inactive: int = 1
+) -> list["CardGameSession"]:
+    """Find and mark abandoned games as completed.
+
+    An abandoned game is one that:
+    - Has status "in_progress"
+    - Started more than {hours_inactive} hours ago
+
+    Returns list of games that were cleaned up.
+    """
+    from app.models import CardGameSession
+
+    cutoff_time = datetime.utcnow() - timedelta(hours=hours_inactive)
+
+    # Find abandoned games
+    statement = select(CardGameSession).where(
+        CardGameSession.status == "in_progress",
+        CardGameSession.started_at.is_not(None),  # type: ignore[union-attr]
+        CardGameSession.started_at < cutoff_time,  # type: ignore[operator]
+    )
+
+    abandoned_games = list(session.exec(statement).all())
+
+    # Mark as completed
+    for game in abandoned_games:
+        game.status = "completed"
+        game.end_reason = "abandoned"
+        game.completed_at = datetime.utcnow()
+        game.winner = None
+        session.add(game)
+
+    session.commit()
+
+    return abandoned_games
+
+
+def get_active_games(
+    *, session: Session, skip: int = 0, limit: int = 100
+) -> tuple[list["CardGameSession"], int]:
+    """Get all active games (in_progress status) with player details.
+
+    Used by admin to view and manage ongoing games.
+
+    Returns:
+        Tuple of (games list, total count)
+    """
+    from app.models import CardGameSession
+
+    # Count total
+    count_statement = (
+        select(func.count())
+        .select_from(CardGameSession)
+        .where(CardGameSession.status == "in_progress")
+    )
+    total = session.exec(count_statement).one()
+
+    # Get games
+    statement = (
+        select(CardGameSession)
+        .where(CardGameSession.status == "in_progress")
+        .order_by(CardGameSession.started_at.desc())  # type: ignore[union-attr]
+        .offset(skip)
+        .limit(limit)
+    )
+
+    games = list(session.exec(statement).all())
+
+    return games, total
+
+
+def force_complete_game(
+    *, session: Session, game_id: uuid.UUID, admin_user_id: uuid.UUID
+) -> "CardGameSession":
+    """Force complete a game (admin action).
+
+    Marks the game as completed with no winner and end_reason="admin_force_completed".
+
+    Args:
+        session: Database session
+        game_id: Game to force complete
+        admin_user_id: ID of admin performing the action (for logging)
+
+    Returns:
+        Updated game session
+
+    Raises:
+        ValueError: If game not found or already completed
+    """
+    import logging
+
+    from app.models import CardGameSession
+
+    logger = logging.getLogger(__name__)
+
+    game = session.get(CardGameSession, game_id)
+
+    if not game:
+        raise ValueError("Game not found")
+
+    if game.status == "completed":
+        raise ValueError("Game already completed")
+
+    logger.warning(
+        f"Admin {admin_user_id} force-completing game {game_id}. "
+        f"Current status: {game.status}, Players: host={game.host_id}, guest={game.guest_id}"
+    )
+
+    # Mark as completed
+    game.status = "completed"
+    game.end_reason = "admin_force_completed"
+    game.completed_at = datetime.utcnow()
+    game.winner = None
+
+    session.add(game)
+    session.commit()
+    session.refresh(game)
+
+    logger.info(
+        f"Game {game_id} force-completed by admin {admin_user_id}. "
+        f"Final status: {game.status}"
+    )
+
+    return game
+
+
+def get_user_game_history(
+    *, session: Session, user_id: uuid.UUID, skip: int = 0, limit: int = 20
+) -> tuple[list[dict[str, Any]], int]:
+    """Get user's completed game history.
+
+    Returns games where user was host or guest, with outcome from user's perspective.
+
+    Args:
+        session: Database session
+        user_id: User to get history for
+        skip: Pagination offset
+        limit: Max games to return
+
+    Returns:
+        Tuple of (game history list, total count)
+    """
+    from app.models import CardGameSession
+
+    # Count total completed games for user
+    count_statement = (
+        select(func.count())
+        .select_from(CardGameSession)
+        .where(
+            (
+                (CardGameSession.host_id == user_id)
+                | (CardGameSession.guest_id == user_id)
+            ),
+            CardGameSession.status == "completed",
+        )
+    )
+    total = session.exec(count_statement).one()
+
+    # Get games
+    statement = (
+        select(CardGameSession)
+        .where(
+            (
+                (CardGameSession.host_id == user_id)
+                | (CardGameSession.guest_id == user_id)
+            ),
+            CardGameSession.status == "completed",
+        )
+        .order_by(CardGameSession.completed_at.desc())  # type: ignore[union-attr]
+        .offset(skip)
+        .limit(limit)
+    )
+
+    games = list(session.exec(statement).all())
+
+    # Build history with outcome from user's perspective
+    history = []
+    for game in games:
+        # Determine if user was host or guest
+        is_host = game.host_id == user_id
+
+        # Get opponent name
+        opponent = game.guest if is_host else game.host
+        opponent_name = (
+            opponent.full_name
+            if opponent and opponent.full_name
+            else opponent.email
+            if opponent
+            else "Unknown"
+        )
+
+        # Determine outcome
+        if not game.winner:
+            # No winner - either abandoned or forced ended
+            outcome = (
+                "forced_ended"
+                if game.end_reason == "admin_force_completed"
+                else "abandoned"
+            )
+        elif (is_host and game.winner == "host") or (
+            not is_host and game.winner == "guest"
+        ):
+            outcome = "won"
+        else:
+            outcome = "lost"
+
+        # Calculate duration
+        duration_minutes = None
+        if game.started_at and game.completed_at:
+            duration = game.completed_at - game.started_at
+            duration_minutes = int(duration.total_seconds() / 60)
+
+        # Get final health values
+        user_final_health = game.host_health if is_host else game.guest_health
+        opponent_final_health = game.guest_health if is_host else game.host_health
+
+        history.append(
+            {
+                "game_id": str(game.id),
+                "room_code": game.room_code,
+                "opponent_name": opponent_name,
+                "outcome": outcome,
+                "completed_at": game.completed_at,
+                "duration_minutes": duration_minutes,
+                "user_final_health": user_final_health,
+                "opponent_final_health": opponent_final_health,
+                "total_turns": game.turn_number,
+            }
+        )
+
+    return history, total

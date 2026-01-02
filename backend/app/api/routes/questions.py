@@ -124,6 +124,21 @@ def create_question(
     """
     Create new question. Requires teacher or superuser role.
     """
+    # Validate question type and correct answers consistency
+    question_type = question_in.question_type
+    correct_answers_count = len(question_in.correct_answers)
+
+    if question_type == "mcq" and correct_answers_count != 1:
+        raise HTTPException(
+            status_code=400,
+            detail="MCQ questions must have exactly 1 correct answer",
+        )
+    elif question_type == "multiselect" and correct_answers_count < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="Multiselect questions must have at least 2 correct answers",
+        )
+
     # Ensure subject exists
     crud.get_or_create_subject(session=session, name=question_in.subject)
 
@@ -154,6 +169,22 @@ def update_question(
     if not current_user.is_superuser and (question.created_by != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
 
+    # Validate question type and correct answers consistency if both are being updated
+    question_type = question_in.question_type or question.question_type
+    correct_answers = question_in.correct_answers or question.correct_answers
+    correct_answers_count = len(correct_answers)
+
+    if question_type == "mcq" and correct_answers_count != 1:
+        raise HTTPException(
+            status_code=400,
+            detail="MCQ questions must have exactly 1 correct answer",
+        )
+    elif question_type == "multiselect" and correct_answers_count < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="Multiselect questions must have at least 2 correct answers",
+        )
+
     # Ensure subject exists if being updated
     if question_in.subject:
         crud.get_or_create_subject(session=session, name=question_in.subject)
@@ -177,11 +208,43 @@ def delete_question(
     """
     Delete a question. Only the creator can delete.
     """
+    from app.models import CardGameAnswer, CardGameSession
+
     question = session.get(Question, id)
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
     if not current_user.is_superuser and (question.created_by != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
+
+    # Check if question is used in any games
+    statement = select(CardGameAnswer).where(CardGameAnswer.question_id == id)
+    answers = session.exec(statement).all()
+
+    if answers:
+        # Get all unique game sessions that used this question
+        game_ids = {answer.game_session_id for answer in answers}
+
+        # Check if any of these games are still in progress
+        # Active statuses: "waiting", "ready", "in_progress"
+        # Inactive statuses: "completed"
+        active_games = []
+        for game_id in game_ids:
+            game = session.get(CardGameSession, game_id)
+            if game and game.status in ("waiting", "ready", "in_progress"):
+                active_games.append(game.room_code or str(game.id)[:8])
+
+        if active_games:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot delete question: still being used in active game(s): {', '.join(active_games)}",
+            )
+
+        # All games are finished - delete answer history first
+        for answer in answers:
+            session.delete(answer)
+        session.commit()
+
+    # Now safe to delete the question
     session.delete(question)
     session.commit()
     return Message(message="Question deleted successfully")
