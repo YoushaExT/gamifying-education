@@ -6,6 +6,9 @@
 
 ### Key Features
 - **2-player turn-based card combat game** with MCQ integration (Three.js + WebSockets)
+  - Game history tracking with outcome badges
+  - Admin game management for stuck/abandoned games
+  - Real-time disconnection handling
 - **AI Question Generation** using OpenAI GPT models with diversity optimization
 - **Quiz System** with timed/untimed modes and detailed results
 - **Question Management** with rich text editor (code blocks, math equations)
@@ -58,6 +61,7 @@
 │   │   │   ├── question_generation.py
 │   │   │   ├── quizzes.py
 │   │   │   ├── multiplayer_game.py
+│   │   │   ├── admin_games.py     # Admin game management
 │   │   │   ├── media.py           # Image upload/download
 │   │   │   └── feature_flags.py
 │   │   ├── core/                 # Config, DB, security
@@ -95,7 +99,8 @@
 │   │   │   │   ├── Card.tsx
 │   │   │   │   └── HealthBar.tsx
 │   │   │   ├── Game/             # Reusable game components
-│   │   │   │   └── OutlinedText.tsx   # 3D text with outline
+│   │   │   │   ├── OutlinedText.tsx   # 3D text with outline
+│   │   │   │   └── OutcomeBadge.tsx   # Win/loss/draw badge
 │   │   │   ├── modals/           # Event-based modal system
 │   │   │   │   ├── ModalRoot.tsx      # Root component
 │   │   │   │   └── ModalWrappers.tsx  # Wrappers
@@ -125,7 +130,8 @@
 │   │       ├── admin/
 │   │       │   ├── questions.tsx
 │   │       │   ├── ai-generate.tsx
-│   │       │   └── feature-flags.tsx
+│   │       │   ├── feature-flags.tsx
+│   │       │   └── games.tsx         # Active game management
 │   │       ├── quiz/
 │   │       │   ├── start.tsx
 │   │       │   ├── take.$attemptId.tsx
@@ -134,7 +140,8 @@
 │   │           ├── create.tsx
 │   │           ├── lobby.$gameId.tsx
 │   │           ├── play.$gameId.tsx
-│   │           └── results.$gameId.tsx
+│   │           ├── results.$gameId.tsx
+│   │           └── history.tsx       # User game history
 │   ├── tests/                    # Playwright E2E
 │   ├── package.json
 │   └── biome.json
@@ -772,6 +779,8 @@ deck:
 ```
 POST /api/v1/multiplayer/games/create
 POST /api/v1/multiplayer/games/join/{room_code}
+GET  /api/v1/multiplayer/games/active          # Get user's active game
+GET  /api/v1/multiplayer/games/history         # Get user's game history
 GET  /api/v1/multiplayer/games/{game_id}
 GET  /api/v1/multiplayer/games/{game_id}/state
 POST /api/v1/multiplayer/games/{game_id}/ready
@@ -781,6 +790,11 @@ POST /api/v1/multiplayer/games/{game_id}/skip-turn
 GET  /api/v1/multiplayer/games/{game_id}/results
 
 WS   /api/v1/multiplayer/games/{game_id}/ws
+
+# Admin endpoints (superuser only)
+GET  /api/v1/admin/active-games                # List all active games
+POST /api/v1/admin/games/{game_id}/force-complete  # Force end game
+POST /api/v1/admin/cleanup-abandoned           # Clean up old abandoned games
 ```
 
 ### WebSocket Events
@@ -822,6 +836,13 @@ WS   /api/v1/multiplayer/games/{game_id}/ws
 - `end_turn()` - Switch turns, draw, apply fatigue
 - `check_game_over()` - Determine winner
 
+**CRUD Functions** (in `backend/app/crud.py`):
+- `get_user_active_game()` - Find user's current in-progress game
+- `get_active_games()` - List all active multiplayer games (admin)
+- `force_complete_game()` - Admin force-end stuck games
+- `cleanup_abandoned_games()` - Batch cleanup of old abandoned sessions
+- `get_user_game_history()` - Fetch completed games with outcome from user's perspective
+
 **MediaStorage** (Storage abstraction):
 - Abstract base class defining storage interface
 - `LocalStorage`: Stores files in `/app/media` directory (development)
@@ -854,6 +875,12 @@ WS   /api/v1/multiplayer/games/{game_id}/ws
 - Scalable with customizable children
 - Used in HealthBar3D for shield value display
 
+**OutcomeBadge.tsx**:
+- Visual indicator for game outcomes
+- Variants: won (green), lost (red), abandoned (gray), forced_ended (orange)
+- Used in game history page
+- Styled with badge component from shadcn/ui
+
 **QuestionPopup.tsx**:
 - Modal for MCQ when card played
 - Checkbox answer selection
@@ -866,6 +893,23 @@ WS   /api/v1/multiplayer/games/{game_id}/ws
 - Preserves opponent's last known state during disconnection
 - Provides: `playCard()`, `skipTurn()`, `sendReady()`
 - Tracks: game state, hand, timer, lastOpponentInfo
+
+### Navigation
+
+**Sidebar** (`components/Common/SidebarItems.tsx`):
+
+**Main Menu** (all users):
+- Dashboard
+- Game
+- **Game History** - View past games (new)
+- User Settings
+- Take Quiz (if `quiz_system` flag enabled)
+
+**Admin Menu** (teacher/superuser):
+- Questions - Question management
+- AI Generate - AI question generation (if flag enabled)
+- Feature Flags - Feature management (superuser only)
+- **Active Games** - Game administration (superuser only, new)
 
 ### Game Flow
 
@@ -885,6 +929,53 @@ WS   /api/v1/multiplayer/games/{game_id}/ws
 - `/game/lobby/$gameId` - Wait and ready
 - `/game/play/$gameId` - 3D game scene
 - `/game/results/$gameId` - Winner and stats
+- `/game/history` - View past games with outcomes
+- `/admin/games` - Admin game management (superuser only)
+
+### Game History
+
+**Route**: `/game/history`
+
+**Features**:
+- View all past completed games
+- **Outcome Badges**: Visual indicators for win/loss/draw/abandoned
+- **Game Details**:
+  - Opponent name
+  - Final scores (health values)
+  - Game duration
+  - Total turns played
+  - Completion date
+- **Quick Actions**:
+  - "View Results" - Navigate to full game results
+  - "Create New Game" - Start a new game
+- **Empty State**: Friendly message when no games played yet
+
+**Access**: All authenticated users
+
+### Admin Game Management
+
+**Route**: `/admin/games` (superuser only)
+
+**Features**:
+- **Active Games List**: Real-time view of all in-progress games
+  - Auto-refreshes every 10 seconds
+  - Shows room code, host/guest names, current turn
+  - Displays game duration
+- **Force Complete**: End stuck games manually
+  - Confirmation dialog before completion
+  - Sets game status to "completed" with admin flag
+- **Cleanup Abandoned Games**: Batch cleanup for old abandoned sessions
+  - Removes games with no activity for extended periods
+  - Confirmation before cleanup
+- **Manual Refresh**: On-demand refresh button
+
+**Access**: Superuser only
+
+**Use Cases**:
+- Fix games stuck due to disconnections
+- Clean up database from abandoned sessions
+- Monitor active gameplay for support
+- Debug game issues
 
 ## Authentication & Security
 

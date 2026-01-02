@@ -22,6 +22,8 @@ export interface PlayerState {
   shield: number
   hand_count: number
   is_current_turn: boolean
+  ability_cooldown: number
+  ability_active: boolean
 }
 
 export interface CardGameState {
@@ -62,6 +64,20 @@ export interface TurnEndData {
   state: CardGameState
 }
 
+export interface AbilityCardResolvedData {
+  player: string
+  card: {
+    card_key: string
+    name: string
+    card_type: string
+  }
+  is_first_correct: boolean
+  is_second_correct: boolean
+  effect_value: number
+  is_reversed: boolean
+  state: CardGameState
+}
+
 type CardGameMessageType =
   | "connected"
   | "player_joined"
@@ -75,6 +91,8 @@ type CardGameMessageType =
   | "turn_skipped"
   | "game_over"
   | "player_disconnected"
+  | "ability_activated"
+  | "card_resolved_with_ability"
   | "error"
 
 interface CardGameWebSocketMessage {
@@ -90,6 +108,8 @@ interface UseCardGameWebSocketOptions {
   onTurnEnd?: (data: TurnEndData) => void
   onTurnSkipped?: (data: TurnEndData) => void
   onGameOver?: (winner: string, state: CardGameState) => void
+  onAbilityActivated?: (player: string, state: CardGameState) => void
+  onCardResolvedWithAbility?: (data: AbilityCardResolvedData) => void
 }
 
 export function useGameWebSocket({
@@ -100,6 +120,8 @@ export function useGameWebSocket({
   onTurnEnd,
   onTurnSkipped,
   onGameOver,
+  onAbilityActivated,
+  onCardResolvedWithAbility,
 }: UseCardGameWebSocketOptions) {
   const { data: currentUser } = useQuery<UserPublic | null, Error>({
     queryKey: ["currentUser"],
@@ -135,6 +157,8 @@ export function useGameWebSocket({
   const onTurnEndRef = useRef(onTurnEnd)
   const onTurnSkippedRef = useRef(onTurnSkipped)
   const onGameOverRef = useRef(onGameOver)
+  const onAbilityActivatedRef = useRef(onAbilityActivated)
+  const onCardResolvedWithAbilityRef = useRef(onCardResolvedWithAbility)
 
   useEffect(() => {
     onGameStartRef.current = onGameStart
@@ -143,6 +167,8 @@ export function useGameWebSocket({
     onTurnEndRef.current = onTurnEnd
     onTurnSkippedRef.current = onTurnSkipped
     onGameOverRef.current = onGameOver
+    onAbilityActivatedRef.current = onAbilityActivated
+    onCardResolvedWithAbilityRef.current = onCardResolvedWithAbility
   }, [
     onGameStart,
     onTurnStart,
@@ -150,6 +176,8 @@ export function useGameWebSocket({
     onTurnEnd,
     onTurnSkipped,
     onGameOver,
+    onAbilityActivated,
+    onCardResolvedWithAbility,
   ])
 
   const handleMessage = useCallback(
@@ -367,6 +395,32 @@ export function useGameWebSocket({
             break
           }
 
+          case "ability_activated": {
+            const state = message.state as CardGameState
+            setGameState(state)
+            if (onAbilityActivatedRef.current) {
+              onAbilityActivatedRef.current(message.player as string, state)
+            }
+            break
+          }
+
+          case "card_resolved_with_ability": {
+            const data: AbilityCardResolvedData = {
+              player: message.player as string,
+              card: message.card as AbilityCardResolvedData["card"],
+              is_first_correct: message.is_first_correct as boolean,
+              is_second_correct: message.is_second_correct as boolean,
+              effect_value: message.effect_value as number,
+              is_reversed: message.is_reversed as boolean,
+              state: message.state as CardGameState,
+            }
+            setGameState(data.state)
+            if (onCardResolvedWithAbilityRef.current) {
+              onCardResolvedWithAbilityRef.current(data)
+            }
+            break
+          }
+
           case "error": {
             setError((message.message as string) || "An error occurred")
             break
@@ -463,9 +517,33 @@ export function useGameWebSocket({
     }
   }
 
+  const playCardWithAbility = (
+    cardIndex: number,
+    selectedAnswers1: number[],
+    selectedAnswers2: number[],
+  ) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "play_card",
+          card_index: cardIndex,
+          is_ability_card: true,
+          selected_answers1: selectedAnswers1,
+          selected_answers2: selectedAnswers2,
+        }),
+      )
+    }
+  }
+
   const skipTurn = () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: "skip_turn" }))
+    }
+  }
+
+  const activateAbility = () => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: "activate_ability" }))
     }
   }
 
@@ -535,7 +613,9 @@ export function useGameWebSocket({
     // Actions
     sendReady,
     playCard,
+    playCardWithAbility,
     skipTurn,
+    activateAbility,
     forfeitGame,
     disconnect,
   }

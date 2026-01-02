@@ -541,12 +541,34 @@ export const CardGameSessionWithPlayersSchema = {
         guest_shield: {
             type: 'integer',
             title: 'Guest Shield',
-            default: 0
+            default: 3
         },
         max_health: {
             type: 'integer',
             title: 'Max Health',
-            default: 30
+            default: 10
+        },
+        host_ability_cooldown: {
+            type: 'integer',
+            minimum: 0,
+            title: 'Host Ability Cooldown',
+            default: 0
+        },
+        guest_ability_cooldown: {
+            type: 'integer',
+            minimum: 0,
+            title: 'Guest Ability Cooldown',
+            default: 0
+        },
+        host_ability_active: {
+            type: 'boolean',
+            title: 'Host Ability Active',
+            default: false
+        },
+        guest_ability_active: {
+            type: 'boolean',
+            title: 'Guest Ability Active',
+            default: false
         },
         host_hand: {
             items: {
@@ -1435,6 +1457,83 @@ export const PrivateUserCreateSchema = {
     type: 'object',
     required: ['email', 'password', 'full_name'],
     title: 'PrivateUserCreate'
+} as const;
+
+export const QuestionSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        question_text: {
+            type: 'string',
+            maxLength: 10000,
+            minLength: 1,
+            title: 'Question Text'
+        },
+        choices: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Choices'
+        },
+        correct_answers: {
+            items: {
+                type: 'integer'
+            },
+            type: 'array',
+            title: 'Correct Answers'
+        },
+        difficulty: {
+            type: 'string',
+            maxLength: 20,
+            title: 'Difficulty',
+            default: 'easy'
+        },
+        question_type: {
+            type: 'string',
+            maxLength: 20,
+            title: 'Question Type',
+            default: 'mcq'
+        },
+        subject_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Subject Id'
+        },
+        topic_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Topic Id'
+        },
+        created_by: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Created By'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['question_text', 'choices', 'correct_answers', 'subject_id', 'created_by'],
+    title: 'Question'
 } as const;
 
 export const QuestionCreateSchema = {

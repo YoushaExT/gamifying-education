@@ -10,22 +10,25 @@ import {
   SkipForward,
   Swords,
   XCircle,
+  Zap,
 } from "lucide-react"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
-import { QuestionsService } from "@/client"
+import { MultiplayerGameService, QuestionsService } from "@/client"
 import { OutlinedText } from "@/components/Game"
 import { QuestionPopup } from "@/components/MultiplayerGame/QuestionPopup"
 import { Button } from "@/components/ui/button"
 import { COLORS, GAME_FONT } from "@/constants"
 import { useConfirm } from "@/hooks/useConfirm"
 import {
+  type AbilityCardResolvedData,
   type CardGameState,
   type CardInstance,
   type CardResolvedData,
   useGameWebSocket,
 } from "@/hooks/useGameWebSocket"
+import { cn } from "@/lib/utils"
 import { Card3D } from "@/models/Card3D"
 import { HealthBar3D } from "@/models/HealthBar3D"
 
@@ -37,6 +40,7 @@ interface QuestionData {
   id: string
   question_text: string
   choices: string[]
+  question_type: string
 }
 
 function GamePlayPage() {
@@ -56,6 +60,14 @@ function GamePlayPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [lastResult, setLastResult] = useState<CardResolvedData | null>(null)
   const [showResultAnimation, setShowResultAnimation] = useState(false)
+
+  // Double question flow state (for ability)
+  const [secondQuestion, setSecondQuestion] = useState<QuestionData | null>(
+    null,
+  )
+  const [showSecondQuestion, setShowSecondQuestion] = useState(false)
+  const [firstQuestionAnswers, setFirstQuestionAnswers] = useState<number[]>([])
+  const [isLoadingSecondQuestion, setIsLoadingSecondQuestion] = useState(false)
 
   // Game callbacks
   const handleGameStart = useCallback((state: CardGameState) => {
@@ -110,7 +122,9 @@ function GamePlayPage() {
     opponentState,
     lastOpponentInfo,
     playCard,
+    playCardWithAbility,
     skipTurn,
+    activateAbility,
     forfeitGame,
     error,
   } = useGameWebSocket({
@@ -119,6 +133,29 @@ function GamePlayPage() {
     onTurnStart: handleTurnStart,
     onCardResolved: handleCardResolved,
     onGameOver: handleGameOver,
+    onAbilityActivated: (player: string, _state: CardGameState) => {
+      if (player === myPlayer) {
+        toast.success("Special ability activated!")
+      } else {
+        toast.info("Opponent activated their ability!")
+      }
+    },
+    onCardResolvedWithAbility: (data: AbilityCardResolvedData) => {
+      setShowQuestion(false)
+      setShowSecondQuestion(false)
+      setSelectedCardIndex(null)
+      setIsSubmitting(false)
+      setFirstQuestionAnswers([])
+
+      let resultMsg = ""
+      if (data.is_reversed) {
+        resultMsg = `❌ Wrong! ${data.card.name} REVERSED - effect applied to YOU!`
+      } else if (data.is_first_correct && data.is_second_correct) {
+        resultMsg = `🎉 DOUBLE CORRECT! ${data.card.name} deals ${data.effect_value} ${data.card.card_type.replace("basic_", "")}!`
+      }
+
+      toast.info(resultMsg, { duration: 4000 })
+    },
   })
 
   // Query for question when card is selected
@@ -149,8 +186,64 @@ function GamePlayPage() {
   const handleQuestionSubmit = async (selectedAnswers: number[]) => {
     if (selectedCardIndex === null) return
 
-    setIsSubmitting(true)
-    playCard(selectedCardIndex, selectedAnswers)
+    const myAbilityActive =
+      myPlayer === "host"
+        ? (gameState?.host?.ability_active ?? false)
+        : (gameState?.guest?.ability_active ?? false)
+
+    if (myAbilityActive) {
+      // ABILITY ACTIVE FLOW - Double questions
+      if (!showSecondQuestion) {
+        // First question submitted - save answer and fetch second question
+        setFirstQuestionAnswers(selectedAnswers)
+        setShowQuestion(false)
+        setIsLoadingSecondQuestion(true)
+
+        try {
+          // Fetch second random question from game's question pool
+          const question2 =
+            await MultiplayerGameService.getRandomQuestionForGame({
+              gameId,
+            })
+
+          setSecondQuestion({
+            id: question2.id ?? "",
+            question_text: question2.question_text,
+            choices: question2.choices,
+            question_type: question2.question_type ?? "mcq",
+          })
+          setShowSecondQuestion(true)
+        } catch (error) {
+          console.error("Failed to load second question:", error)
+          toast.error("Failed to load second question")
+          // Reset state
+          setSelectedCardIndex(null)
+          setFirstQuestionAnswers([])
+        } finally {
+          setIsLoadingSecondQuestion(false)
+        }
+      } else {
+        // Second question submitted - send both answers to backend
+        setIsSubmitting(true)
+
+        // Send both answers via WebSocket with ability card flag
+        // Backend will handle this through handle_play_card_with_ability
+        playCardWithAbility(
+          selectedCardIndex,
+          firstQuestionAnswers,
+          selectedAnswers,
+        )
+
+        // Clear state (will be reset by handleCardResolvedWithAbility callback)
+        // setShowSecondQuestion(false)
+        // setSecondQuestion(null)
+        // setFirstQuestionAnswers([])
+      }
+    } else {
+      // NORMAL FLOW - Single question
+      setIsSubmitting(true)
+      playCard(selectedCardIndex, selectedAnswers)
+    }
   }
 
   // Handle skip turn
@@ -181,6 +274,51 @@ function GamePlayPage() {
     if (confirmed) {
       forfeitGame()
       toast.info("Game forfeited")
+    }
+  }
+
+  // Handle activate ability
+  const handleActivateAbility = async () => {
+    const myAbilityCooldown =
+      myPlayer === "host"
+        ? (gameState?.host?.ability_cooldown ?? 4)
+        : (gameState?.guest?.ability_cooldown ?? 4)
+
+    const myAbilityActive =
+      myPlayer === "host"
+        ? (gameState?.host?.ability_active ?? false)
+        : (gameState?.guest?.ability_active ?? false)
+
+    if (myAbilityCooldown > 0 || !isMyTurn || myAbilityActive) return
+
+    const confirmed = await confirm({
+      title: "Activate Special Ability?",
+      description: (
+        <>
+          <div className="font-semibold mb-2">
+            Double Questions, Double Stakes!
+          </div>
+          <div>Your next card requires answering TWO questions:</div>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>
+              <strong>Both correct:</strong> Double effect!
+            </li>
+            <li>
+              <strong>Any wrong:</strong> Reverse effect on YOU
+            </li>
+          </ul>
+          <div className="mt-3 text-amber-600 font-semibold">
+            Cooldown: 4 turns after activation
+          </div>
+        </>
+      ),
+      confirmText: "Activate",
+      cancelText: "Cancel",
+    })
+
+    if (confirmed) {
+      activateAbility()
+      toast.success("Special ability activated!")
     }
   }
 
@@ -411,6 +549,42 @@ function GamePlayPage() {
             </Button>
           )}
 
+          {/* Special Ability Button - only visible on your turn */}
+          {isMyTurn &&
+            (() => {
+              const myAbilityCooldown =
+                myPlayer === "host"
+                  ? (gameState?.host?.ability_cooldown ?? 4)
+                  : (gameState?.guest?.ability_cooldown ?? 4)
+
+              const myAbilityActive =
+                myPlayer === "host"
+                  ? (gameState?.host?.ability_active ?? false)
+                  : (gameState?.guest?.ability_active ?? false)
+
+              return (
+                <Button
+                  variant={myAbilityActive ? "secondary" : "default"}
+                  onClick={handleActivateAbility}
+                  disabled={myAbilityCooldown > 0 || myAbilityActive}
+                  className={cn("font-semibold shadow-lg", {
+                    "bg-purple-600 hover:bg-purple-700 text-white":
+                      myAbilityCooldown === 0 && !myAbilityActive,
+                    "bg-gray-500 text-gray-300": myAbilityCooldown > 0,
+                    "bg-green-600 text-white ring-2 ring-green-400":
+                      myAbilityActive,
+                  })}
+                >
+                  <Zap className="h-5 w-5 mr-2" />
+                  {myAbilityActive
+                    ? "Ability Active!"
+                    : myAbilityCooldown > 0
+                      ? `Cooldown: ${myAbilityCooldown}`
+                      : "Special Ability"}
+                </Button>
+              )
+            })()}
+
           {/* Leave Game Button - always visible during game */}
           <Button variant="destructive" onClick={handleLeaveGame}>
             <XCircle className="h-5 w-5 mr-2" />
@@ -419,7 +593,7 @@ function GamePlayPage() {
         </div>
       )}
 
-      {/* Question Popup */}
+      {/* First Question Popup */}
       <QuestionPopup
         isOpen={showQuestion && questionData !== null}
         question={questionData ?? null}
@@ -428,8 +602,27 @@ function GamePlayPage() {
         isSubmitting={isSubmitting}
       />
 
-      {/* Loading question state */}
+      {/* Second Question Popup (for ability) */}
+      <QuestionPopup
+        isOpen={showSecondQuestion && secondQuestion !== null}
+        question={secondQuestion ?? null}
+        cardName={myHand[selectedCardIndex ?? 0]?.name ?? "Card"}
+        onSubmit={handleQuestionSubmit}
+        isSubmitting={isSubmitting}
+      />
+
+      {/* Loading first question state */}
       {showQuestion && isLoadingQuestion && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-slate-900 p-6 rounded-lg">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-amber-500" />
+            <p className="text-center text-white mt-2">Loading question...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Loading second question state (for ability) */}
+      {isLoadingSecondQuestion && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
           <div className="bg-slate-900 p-6 rounded-lg">
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-amber-500" />

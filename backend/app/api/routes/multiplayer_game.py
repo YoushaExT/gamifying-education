@@ -23,6 +23,7 @@ from app.models import (
     CardGameSessionCreate,
     CardGameSessionWithPlayers,
     CardGameStatePublic,
+    Question,
 )
 from app.services.card_template_service import CardTemplateService
 from app.services.game_service import CardGameService
@@ -300,6 +301,32 @@ def get_game_state(
         current_turn=state["current_turn"],
         winner=state["winner"],
     )
+
+
+@router.get("/games/{game_id}/random-question")
+def get_random_question_for_game(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    game_id: uuid.UUID,
+) -> Question:
+    """Get a random question from the game's question pool for ability mechanic."""
+    game = crud.get_card_game_session(session=session, game_id=game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    # Verify user is a player in this game
+    if current_user.id not in [game.host_id, game.guest_id]:
+        raise HTTPException(status_code=403, detail="Not a player in this game")
+
+    # Get random question from game's subjects/topics
+    game_service = CardGameService(session, game_id)
+    questions = game_service._get_random_questions(game.subjects, game.topics, limit=1)
+
+    if not questions:
+        raise HTTPException(status_code=404, detail="No questions available")
+
+    return questions[0]
 
 
 @router.post("/games/{game_id}/ready")
@@ -608,6 +635,7 @@ async def websocket_endpoint(
     Events handled:
     - player_ready: Player marks themselves as ready
     - play_card: Player plays a card with answer
+    - activate_ability: Player activates special ability
     - skip_turn: Player skips their turn
     """
     user_id: str | None = None
@@ -725,14 +753,30 @@ async def websocket_endpoint(
                 await handle_player_ready(game_id, game_id_str, user_id, websocket)
 
             elif event_type == "play_card":
-                await handle_play_card(
-                    game_id,
-                    game_id_str,
-                    user_id,
-                    data.get("card_index", 0),
-                    data.get("selected_answers", []),
-                    websocket,
-                )
+                # Check if this is ability-enhanced play (requires 2 questions)
+                if data.get("is_ability_card", False):
+                    await handle_play_card_with_ability(
+                        game_id,
+                        game_id_str,
+                        user_id,
+                        data.get("card_index", 0),
+                        data.get("selected_answers1", []),
+                        data.get("selected_answers2"),
+                        websocket,
+                    )
+                else:
+                    # Normal single question flow
+                    await handle_play_card(
+                        game_id,
+                        game_id_str,
+                        user_id,
+                        data.get("card_index", 0),
+                        data.get("selected_answers", []),
+                        websocket,
+                    )
+
+            elif event_type == "activate_ability":
+                await handle_activate_ability(game_id, game_id_str, user_id, websocket)
 
             elif event_type == "skip_turn":
                 await handle_skip_turn(game_id, game_id_str, user_id, websocket)
@@ -1175,3 +1219,195 @@ async def handle_forfeit_game(
             )
         except ValueError as e:
             await websocket.send_json({"type": "error", "message": str(e)})
+
+
+async def handle_activate_ability(
+    game_id: uuid.UUID,
+    game_id_str: str,
+    user_id: str,
+    websocket: WebSocket,
+) -> None:
+    """Handle special ability activation."""
+    with Session(engine) as db_session:
+        game = crud.get_card_game_session(session=db_session, game_id=game_id)
+        if not game:
+            await websocket.send_json({"type": "error", "message": "Game not found"})
+            return
+
+        # Determine player and validate turn
+        if str(game.host_id) == user_id:
+            player = "host"
+        elif game.guest_id and str(game.guest_id) == user_id:
+            player = "guest"
+        else:
+            await websocket.send_json({"type": "error", "message": "Not a player"})
+            return
+
+        if game.current_turn != player:
+            await websocket.send_json({"type": "error", "message": "Not your turn"})
+            return
+
+        game_service = CardGameService(db_session, game_id)
+
+        try:
+            result = game_service.activate_ability(player)
+            await manager.broadcast(
+                game_id_str,
+                {
+                    "type": "ability_activated",
+                    "player": player,
+                    "cooldown": result["cooldown"],
+                    "state": game_service.get_game_state(),
+                },
+            )
+        except ValueError as e:
+            await websocket.send_json({"type": "error", "message": str(e)})
+
+
+async def handle_play_card_with_ability(
+    game_id: uuid.UUID,
+    game_id_str: str,
+    user_id: str,
+    card_index: int,
+    selected_answers1: list[int],
+    selected_answers2: list[int] | None,
+    websocket: WebSocket,
+) -> None:
+    """Handle card play when special ability is active (requires 2 answers)."""
+    with Session(engine) as db_session:
+        game = crud.get_card_game_session(session=db_session, game_id=game_id)
+        if not game:
+            await websocket.send_json({"type": "error", "message": "Game not found"})
+            return
+
+        # Determine player
+        if str(game.host_id) == user_id:
+            player = "host"
+        elif game.guest_id and str(game.guest_id) == user_id:
+            player = "guest"
+        else:
+            await websocket.send_json({"type": "error", "message": "Not a player"})
+            return
+
+        if game.current_turn != player:
+            await websocket.send_json({"type": "error", "message": "Not your turn"})
+            return
+
+        # Verify ability is active
+        ability_active = (
+            game.host_ability_active if player == "host" else game.guest_ability_active
+        )
+        if not ability_active:
+            await websocket.send_json(
+                {"type": "error", "message": "Ability not active"}
+            )
+            return
+
+        game_service = CardGameService(db_session, game_id)
+
+        # Play card (removes from hand)
+        card, question1 = game_service.play_card(player, card_index)
+        if not card or not question1:
+            await websocket.send_json({"type": "error", "message": "Invalid card"})
+            return
+
+        # Get second question if answers provided
+        question2 = None
+        if selected_answers2 is not None:
+            # Fetch second question from pool
+            questions = game_service._get_random_questions(
+                game.subjects, game.topics, limit=1
+            )
+            question2 = questions[0] if questions else question1  # Fallback
+
+        # Resolve with ability logic
+        (
+            is_first_correct,
+            is_second_correct,
+            effect_value,
+            is_reversed,
+        ) = game_service.resolve_answer_with_ability(
+            player=player,
+            card=card,
+            question1=question1,
+            selected_answers1=selected_answers1,
+            question2=question2,
+            selected_answers2=selected_answers2,
+        )
+
+        # Broadcast result
+        await manager.broadcast(
+            game_id_str,
+            {
+                "type": "card_resolved_with_ability",
+                "player": player,
+                "card": {
+                    "card_key": card["card_key"],
+                    "name": card["name"],
+                    "card_type": card.get("card_type", ""),
+                },
+                "is_first_correct": is_first_correct,
+                "is_second_correct": is_second_correct,
+                "effect_value": effect_value,
+                "is_reversed": is_reversed,
+                "state": game_service.get_game_state(),
+            },
+        )
+
+        # Check game over
+        winner = game_service.check_game_over()
+        if winner:
+            await manager.broadcast(
+                game_id_str,
+                {
+                    "type": "game_over",
+                    "winner": winner,
+                    "end_reason": "health_zero",
+                    "state": game_service.get_game_state(),
+                },
+            )
+        else:
+            # End turn
+            result = game_service.end_turn()
+            fatigue_damage = result.get("fatigue_damage", 0)
+            next_player = result.get("next_player", "")
+
+            # Broadcast turn end
+            await manager.broadcast(
+                game_id_str,
+                {
+                    "type": "turn_end",
+                    "fatigue_damage": fatigue_damage,
+                    "next_player": next_player,
+                    "state": game_service.get_game_state(),
+                },
+            )
+
+            # Start next turn
+            next_hand = game_service.get_player_hand(next_player)
+            next_user_id = str(game.host_id if next_player == "host" else game.guest_id)
+            await manager.send_to_user(
+                game_id_str,
+                next_user_id,
+                {
+                    "type": "turn_start",
+                    "current_player": next_player,
+                    "turn_number": game.turn_number,
+                    "timer_seconds": 60,
+                    "hand": next_hand,
+                    "state": game_service.get_game_state(),
+                },
+            )
+
+            # Check game over after fatigue damage
+            winner = game_service.check_game_over()
+            if winner:
+                await manager.broadcast(
+                    game_id_str,
+                    {
+                        "type": "game_over",
+                        "winner": winner,
+                        "end_reason": "health_zero",
+                        "state": game_service.get_game_state(),
+                    },
+                )
