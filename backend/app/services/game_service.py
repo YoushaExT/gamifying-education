@@ -377,21 +377,39 @@ class CardGameService:
             return None
 
         if game.host_health <= 0:
+            logger.info(
+                f"Game {self.game_id} ending: Host health reached 0, Guest wins. "
+                f"Host HP: {game.host_health}, Guest HP: {game.guest_health}"
+            )
             game.winner = "guest"
             game.status = "completed"
             game.end_reason = "health_zero"
             game.completed_at = datetime.utcnow()
             self.session.add(game)
             self.session.commit()
+            self.session.refresh(game)
+            logger.info(
+                f"Game {self.game_id} marked as completed: "
+                f"status={game.status}, winner={game.winner}, end_reason={game.end_reason}"
+            )
             return "guest"
 
         if game.guest_health <= 0:
+            logger.info(
+                f"Game {self.game_id} ending: Guest health reached 0, Host wins. "
+                f"Host HP: {game.host_health}, Guest HP: {game.guest_health}"
+            )
             game.winner = "host"
             game.status = "completed"
             game.end_reason = "health_zero"
             game.completed_at = datetime.utcnow()
             self.session.add(game)
             self.session.commit()
+            self.session.refresh(game)
+            logger.info(
+                f"Game {self.game_id} marked as completed: "
+                f"status={game.status}, winner={game.winner}, end_reason={game.end_reason}"
+            )
             return "host"
 
         return None
@@ -416,6 +434,11 @@ class CardGameService:
         # Determine winner (opposite of forfeiter)
         winner = "guest" if player == "host" else "host"
 
+        logger.info(
+            f"Game {self.game_id} being forfeited by {player}. "
+            f"Current status: {game.status}, Winner will be: {winner}"
+        )
+
         # Update game state
         game.winner = winner
         game.status = "completed"
@@ -426,7 +449,10 @@ class CardGameService:
         self.session.commit()
         self.session.refresh(game)
 
-        logger.info(f"Game {self.game_id} forfeited by {player}, winner: {winner}")
+        logger.info(
+            f"Game {self.game_id} marked as completed after forfeit: "
+            f"status={game.status}, winner={game.winner}, end_reason={game.end_reason}"
+        )
 
         return winner
 

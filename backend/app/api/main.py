@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.routes import (
+    admin_games,
     feature_flags,
     items,
     login,
@@ -50,6 +51,10 @@ api_router.include_router(
     multiplayer_game.router,
     prefix="/multiplayer",
     tags=["multiplayer-game"],
+)
+api_router.include_router(
+    admin_games.router,
+    tags=["admin"],
 )
 api_router.include_router(media.router)
 
