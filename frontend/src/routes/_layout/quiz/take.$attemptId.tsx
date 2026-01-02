@@ -68,7 +68,7 @@ function QuizTakePage() {
     queryFn: async () => {
       if (!attempt) return []
       // Fetch each question
-      const questionPromises = attempt.question_ids.map((id: string) =>
+      const questionPromises = attempt.question_ids.map((id) =>
         QuestionsService.readQuestion({ id }),
       )
       return Promise.all(questionPromises)

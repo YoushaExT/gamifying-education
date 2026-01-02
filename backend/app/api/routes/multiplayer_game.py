@@ -3,9 +3,11 @@
 import asyncio
 import logging
 import uuid
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel
 from sqlmodel import Session
 
 from app import crud
@@ -180,6 +182,53 @@ def get_active_game(
         host_name=host_name,
         guest_name=guest_name,
     )
+
+
+# ==================== Game History ====================
+
+
+class GameHistoryItem(BaseModel):
+    """Single game in user's history."""
+
+    game_id: str
+    room_code: str
+    opponent_name: str
+    outcome: str  # "won" | "lost" | "abandoned" | "forced_ended"
+    completed_at: datetime | None
+    duration_minutes: int | None
+    user_final_health: int
+    opponent_final_health: int
+    total_turns: int
+
+
+class GameHistoryResponse(BaseModel):
+    """Response for game history list."""
+
+    games: list[GameHistoryItem]
+    total: int
+
+
+@router.get("/games/history", response_model=GameHistoryResponse)
+def get_game_history(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    skip: int = 0,
+    limit: int = 20,
+) -> GameHistoryResponse:
+    """
+    Get user's game history.
+
+    Returns completed games where user was host or guest, with outcome from user's perspective.
+    """
+    history, total = crud.get_user_game_history(
+        session=session, user_id=current_user.id, skip=skip, limit=limit
+    )
+
+    # Convert dict history to Pydantic models
+    game_items = [GameHistoryItem(**game_dict) for game_dict in history]
+
+    return GameHistoryResponse(games=game_items, total=total)
 
 
 @router.get("/games/{game_id}", response_model=CardGameSessionWithPlayers)
@@ -707,10 +756,25 @@ async def websocket_endpoint(
             # Remove from manager
             manager.disconnect(game_id_str, user_id)
 
+            # Check how many players are still connected
+            remaining_connections = len(manager.active_connections.get(game_id_str, []))
+            logger.info(
+                f"After disconnect: {remaining_connections} connections remaining "
+                f"for game {game_id_str}"
+            )
+
+            # If no players left, log for potential cleanup
+            if remaining_connections == 0:
+                logger.warning(
+                    f"All players disconnected from game {game_id_str}. "
+                    f"Game may need cleanup if not rejoined."
+                )
+
             # Cancel game task if exists
             if game_id_str in active_game_tasks:
                 active_game_tasks[game_id_str].cancel()
                 del active_game_tasks[game_id_str]
+                logger.info(f"Cancelled active game task for game {game_id_str}")
 
     except Exception as e:
         logger.error(f"WebSocket error: {e}")

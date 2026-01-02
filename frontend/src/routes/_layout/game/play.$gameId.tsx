@@ -1,6 +1,6 @@
 import { OrbitControls, Text } from "@react-three/drei"
 import { Canvas } from "@react-three/fiber"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import {
   Clock,
@@ -43,6 +43,7 @@ function GamePlayPage() {
   const { gameId } = Route.useParams()
   const navigate = useNavigate()
   const { confirm } = useConfirm()
+  const queryClient = useQueryClient()
 
   // UI state
   const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(
@@ -87,11 +88,14 @@ function GamePlayPage() {
 
   const handleGameOver = useCallback(
     (_winner: string, _state: CardGameState) => {
+      // Invalidate active game query so it refreshes immediately
+      queryClient.invalidateQueries({ queryKey: ["activeGame"] })
+
       // Navigate to results page - detailed results shown there
       toast.success("Game Over!")
       navigate({ to: `/game/results/${gameId}` })
     },
-    [gameId, navigate],
+    [gameId, navigate, queryClient],
   )
 
   // WebSocket connection

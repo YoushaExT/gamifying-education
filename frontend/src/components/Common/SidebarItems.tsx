@@ -5,7 +5,9 @@ import {
   ClipboardList,
   Gamepad2,
   HelpCircle,
+  History,
   Home,
+  Monitor,
   Settings,
   Shield,
   Sparkles,
@@ -17,6 +19,7 @@ import { useFeatureFlag } from "@/contexts/FeatureFlagsContext"
 const items = [
   { icon: Home, title: "Dashboard", path: "/" },
   { icon: Gamepad2, title: "Game", path: "/game" },
+  { icon: History, title: "Game History", path: "/game/history" },
   { icon: Settings, title: "User Settings", path: "/settings" },
 ]
 
@@ -70,6 +73,11 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
       icon: Shield,
       title: "Feature Flags",
       path: "/admin/feature-flags",
+    })
+    adminItems.push({
+      icon: Monitor,
+      title: "Active Games",
+      path: "/admin/games",
     })
   }
 

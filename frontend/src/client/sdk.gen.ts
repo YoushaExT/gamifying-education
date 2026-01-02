@@ -3,7 +3,81 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { FeatureFlagsListFeatureFlagsForUserData, FeatureFlagsListFeatureFlagsForUserResponse, FeatureFlagsListAllFeatureFlagsData, FeatureFlagsListAllFeatureFlagsResponse, FeatureFlagsUpdateFlagData, FeatureFlagsUpdateFlagResponse, FeatureFlagsCheckFlagStatusData, FeatureFlagsCheckFlagStatusResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MediaUploadImageData, MediaUploadImageResponse, MediaGetImageData, MediaGetImageResponse, MediaDeleteImageData, MediaDeleteImageResponse, MultiplayerGameCreateGameData, MultiplayerGameCreateGameResponse, MultiplayerGameJoinGameData, MultiplayerGameJoinGameResponse, MultiplayerGameGetActiveGameResponse, MultiplayerGameGetGameData, MultiplayerGameGetGameResponse, MultiplayerGameGetGameStateData, MultiplayerGameGetGameStateResponse, MultiplayerGameMarkReadyData, MultiplayerGameMarkReadyResponse, MultiplayerGameGetPlayerHandData, MultiplayerGameGetPlayerHandResponse, MultiplayerGamePlayCardData, MultiplayerGamePlayCardResponse, MultiplayerGameSkipTurnData, MultiplayerGameSkipTurnResponse, MultiplayerGameGetGameResultsData, MultiplayerGameGetGameResultsResponse, PrivateCreateUserData, PrivateCreateUserResponse, QuestionGenerationGenerateQuestionsData, QuestionGenerationGenerateQuestionsResponse, QuestionGenerationListGeneratedQuestionsData, QuestionGenerationListGeneratedQuestionsResponse, QuestionGenerationApproveGeneratedQuestionData, QuestionGenerationApproveGeneratedQuestionResponse, QuestionGenerationRejectGeneratedQuestionData, QuestionGenerationRejectGeneratedQuestionResponse, QuestionGenerationApproveBatchData, QuestionGenerationApproveBatchResponse, QuestionsReadQuestionsData, QuestionsReadQuestionsResponse, QuestionsCreateQuestionData, QuestionsCreateQuestionResponse, QuestionsReadQuestionData, QuestionsReadQuestionResponse, QuestionsUpdateQuestionData, QuestionsUpdateQuestionResponse, QuestionsDeleteQuestionData, QuestionsDeleteQuestionResponse, QuestionTemplatesListTemplatesData, QuestionTemplatesListTemplatesResponse, QuestionTemplatesCreateTemplateData, QuestionTemplatesCreateTemplateResponse, QuestionTemplatesGetTemplateData, QuestionTemplatesGetTemplateResponse, QuestionTemplatesUpdateTemplateData, QuestionTemplatesUpdateTemplateResponse, QuestionTemplatesDeleteTemplateData, QuestionTemplatesDeleteTemplateResponse, QuizzesStartQuizData, QuizzesStartQuizResponse, QuizzesGetAttemptData, QuizzesGetAttemptResponse, QuizzesGetQuizDetailsData, QuizzesGetQuizDetailsResponse, QuizzesSubmitAnswerData, QuizzesSubmitAnswerResponse, QuizzesCompleteQuizData, QuizzesCompleteQuizResponse, QuizzesGetQuizResultsData, QuizzesGetQuizResultsResponse, QuizzesGetQuizHistoryData, QuizzesGetQuizHistoryResponse, SubjectsReadSubjectsData, SubjectsReadSubjectsResponse, TopicsReadTopicsData, TopicsReadTopicsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AdminGetActiveGamesData, AdminGetActiveGamesResponse, AdminForceCompleteGameData, AdminForceCompleteGameResponse, AdminCleanupAbandonedGamesData, AdminCleanupAbandonedGamesResponse, FeatureFlagsListFeatureFlagsForUserData, FeatureFlagsListFeatureFlagsForUserResponse, FeatureFlagsListAllFeatureFlagsData, FeatureFlagsListAllFeatureFlagsResponse, FeatureFlagsUpdateFlagData, FeatureFlagsUpdateFlagResponse, FeatureFlagsCheckFlagStatusData, FeatureFlagsCheckFlagStatusResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MediaUploadImageData, MediaUploadImageResponse, MediaGetImageData, MediaGetImageResponse, MediaDeleteImageData, MediaDeleteImageResponse, MultiplayerGameCreateGameData, MultiplayerGameCreateGameResponse, MultiplayerGameJoinGameData, MultiplayerGameJoinGameResponse, MultiplayerGameGetActiveGameResponse, MultiplayerGameGetGameHistoryData, MultiplayerGameGetGameHistoryResponse, MultiplayerGameGetGameData, MultiplayerGameGetGameResponse, MultiplayerGameGetGameStateData, MultiplayerGameGetGameStateResponse, MultiplayerGameMarkReadyData, MultiplayerGameMarkReadyResponse, MultiplayerGameGetPlayerHandData, MultiplayerGameGetPlayerHandResponse, MultiplayerGamePlayCardData, MultiplayerGamePlayCardResponse, MultiplayerGameSkipTurnData, MultiplayerGameSkipTurnResponse, MultiplayerGameGetGameResultsData, MultiplayerGameGetGameResultsResponse, PrivateCreateUserData, PrivateCreateUserResponse, QuestionGenerationGenerateQuestionsData, QuestionGenerationGenerateQuestionsResponse, QuestionGenerationListGeneratedQuestionsData, QuestionGenerationListGeneratedQuestionsResponse, QuestionGenerationApproveGeneratedQuestionData, QuestionGenerationApproveGeneratedQuestionResponse, QuestionGenerationRejectGeneratedQuestionData, QuestionGenerationRejectGeneratedQuestionResponse, QuestionGenerationApproveBatchData, QuestionGenerationApproveBatchResponse, QuestionsReadQuestionsData, QuestionsReadQuestionsResponse, QuestionsCreateQuestionData, QuestionsCreateQuestionResponse, QuestionsReadQuestionData, QuestionsReadQuestionResponse, QuestionsUpdateQuestionData, QuestionsUpdateQuestionResponse, QuestionsDeleteQuestionData, QuestionsDeleteQuestionResponse, QuestionTemplatesListTemplatesData, QuestionTemplatesListTemplatesResponse, QuestionTemplatesCreateTemplateData, QuestionTemplatesCreateTemplateResponse, QuestionTemplatesGetTemplateData, QuestionTemplatesGetTemplateResponse, QuestionTemplatesUpdateTemplateData, QuestionTemplatesUpdateTemplateResponse, QuestionTemplatesDeleteTemplateData, QuestionTemplatesDeleteTemplateResponse, QuizzesStartQuizData, QuizzesStartQuizResponse, QuizzesGetAttemptData, QuizzesGetAttemptResponse, QuizzesGetQuizDetailsData, QuizzesGetQuizDetailsResponse, QuizzesSubmitAnswerData, QuizzesSubmitAnswerResponse, QuizzesCompleteQuizData, QuizzesCompleteQuizResponse, QuizzesGetQuizResultsData, QuizzesGetQuizResultsResponse, QuizzesGetQuizHistoryData, QuizzesGetQuizHistoryResponse, SubjectsReadSubjectsData, SubjectsReadSubjectsResponse, TopicsReadTopicsData, TopicsReadTopicsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+
+export class AdminService {
+    /**
+     * Get Active Games
+     * Get all active games (superuser only).
+     *
+     * Returns list of all games currently in progress with player details.
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @returns AdminGameListResponse Successful Response
+     * @throws ApiError
+     */
+    public static getActiveGames(data: AdminGetActiveGamesData = {}): CancelablePromise<AdminGetActiveGamesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin/games/active',
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Force Complete Game
+     * Force complete a game (superuser only).
+     *
+     * Marks the game as completed with no winner. Used to clean up stuck games.
+     * @param data The data for the request.
+     * @param data.gameId
+     * @returns ForceCompleteResponse Successful Response
+     * @throws ApiError
+     */
+    public static forceCompleteGame(data: AdminForceCompleteGameData): CancelablePromise<AdminForceCompleteGameResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/games/{game_id}/force-complete',
+            path: {
+                game_id: data.gameId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Cleanup Abandoned Games
+     * Clean up abandoned games (superuser only).
+     *
+     * Finds games that have been in progress for more than specified hours
+     * and marks them as completed with 'abandoned' end reason.
+     * @param data The data for the request.
+     * @param data.hoursInactive
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static cleanupAbandonedGames(data: AdminCleanupAbandonedGamesData = {}): CancelablePromise<AdminCleanupAbandonedGamesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/games/cleanup',
+            query: {
+                hours_inactive: data.hoursInactive
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
 
 export class FeatureFlagsService {
     /**
@@ -469,6 +543,31 @@ export class MultiplayerGameService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/multiplayer/games/active'
+        });
+    }
+    
+    /**
+     * Get Game History
+     * Get user's game history.
+     *
+     * Returns completed games where user was host or guest, with outcome from user's perspective.
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @returns GameHistoryResponse Successful Response
+     * @throws ApiError
+     */
+    public static getGameHistory(data: MultiplayerGameGetGameHistoryData = {}): CancelablePromise<MultiplayerGameGetGameHistoryResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/multiplayer/games/history',
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     
