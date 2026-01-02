@@ -45,6 +45,12 @@ jobs:
           role-to-assume: ${{ env.ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # Set up QEMU for ARM64 emulation
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
       # Set up Docker Buildx for multi-platform builds
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -81,12 +87,15 @@ jobs:
         run: |
           cd backend
           docker buildx build --platform linux/arm64 \
+            --cache-from type=registry,ref=$ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:buildcache \
+            --cache-to type=registry,ref=$ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:buildcache,mode=max \
             -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG \
             -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:latest \
             --push \
+            --provenance=false \
             .
 
-      # Build and push frontend Docker image
+      # Build and push frontend Docker image with optimizations
       - name: Build and push frontend image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -94,10 +103,13 @@ jobs:
         run: |
           cd frontend
           docker buildx build --platform linux/arm64 \
+            --cache-from type=registry,ref=$ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:buildcache \
+            --cache-to type=registry,ref=$ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:buildcache,mode=max \
             -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG \
             -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:latest \
             -f Dockerfile.prod \
             --push \
+            --provenance=false \
             .
 
       # Deploy to EC2 using SSM Session Manager (no SSH keys needed!)

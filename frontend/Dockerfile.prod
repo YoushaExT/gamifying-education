@@ -1,12 +1,12 @@
-# Build stage
-FROM node:24-alpine as build
+# Build stage - use native amd64 for fast builds (static output works on any platform)
+FROM --platform=linux/amd64 node:24-alpine AS build
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
+# Install dependencies (runs natively on amd64, no QEMU issues)
 RUN npm ci
 
 # Copy source code
@@ -16,10 +16,10 @@ COPY . .
 ARG VITE_API_URL=""
 ENV VITE_API_URL=${VITE_API_URL}
 
-# Build the application
+# Build the application (produces platform-independent static files)
 RUN npm run build
 
-# Production stage - serve with nginx
+# Production stage - serve with nginx (this stage uses target platform: arm64)
 FROM nginx:alpine
 
 # Install curl for health check
