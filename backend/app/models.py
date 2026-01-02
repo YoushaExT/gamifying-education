@@ -607,6 +607,13 @@ class CardGameSessionBase(SQLModel):
     max_health: int = Field(
         default=10
     )  # Changed from 30 - health caps at starting value
+    # Special ability state
+    host_ability_cooldown: int = Field(default=0, ge=0)  # 0 = ready, 1-4 = on cooldown
+    guest_ability_cooldown: int = Field(default=0, ge=0)
+    host_ability_active: bool = Field(
+        default=False
+    )  # True when ability activated (next card needs 2 questions)
+    guest_ability_active: bool = Field(default=False)
     # Card state (JSON arrays of card instances with question_id)
     host_hand: list[dict[str, Any]] = Field(
         default_factory=list, sa_column=Column(JSON)

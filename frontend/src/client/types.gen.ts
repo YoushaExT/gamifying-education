@@ -123,6 +123,10 @@ export type CardGameSessionWithPlayers = {
     host_shield?: number;
     guest_shield?: number;
     max_health?: number;
+    host_ability_cooldown?: number;
+    guest_ability_cooldown?: number;
+    host_ability_active?: boolean;
+    guest_ability_active?: boolean;
     host_hand?: Array<{
         [key: string]: unknown;
     }>;
@@ -308,6 +312,20 @@ export type PrivateUserCreate = {
     password: string;
     full_name: string;
     is_verified?: boolean;
+};
+
+export type Question = {
+    id?: string;
+    question_text: string;
+    choices: Array<(string)>;
+    correct_answers: Array<(number)>;
+    difficulty?: string;
+    question_type?: string;
+    subject_id: string;
+    topic_id?: (string | null);
+    created_by: string;
+    created_at?: string;
+    updated_at?: string;
 };
 
 export type QuestionCreate = {
@@ -724,6 +742,12 @@ export type MultiplayerGameGetGameStateData = {
 };
 
 export type MultiplayerGameGetGameStateResponse = (CardGameStatePublic);
+
+export type MultiplayerGameGetRandomQuestionForGameData = {
+    gameId: string;
+};
+
+export type MultiplayerGameGetRandomQuestionForGameResponse = (Question);
 
 export type MultiplayerGameMarkReadyData = {
     gameId: string;
