@@ -23,8 +23,8 @@ const loadDevtools = () =>
     }
   })
 
-const TanStackDevtools =
-  process.env.NODE_ENV === "production" ? () => null : React.lazy(loadDevtools)
+const TanStackDevtools = () => null
+  // process.env.NODE_ENV === "production" ? () => null : React.lazy(loadDevtools)
 
 export const Route = createRootRoute<RouterContext>({
   component: () => (
