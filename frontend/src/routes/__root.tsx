@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query"
 import { createRootRoute, Outlet } from "@tanstack/react-router"
-import React, { Suspense } from "react"
+import { Suspense } from "react"
 
 import NotFound from "@/components/Common/NotFound"
 
@@ -8,7 +8,7 @@ interface RouterContext {
   queryClient: QueryClient
 }
 
-const loadDevtools = () =>
+const _loadDevtools = () =>
   Promise.all([
     import("@tanstack/router-devtools"),
     import("@tanstack/react-query-devtools"),
@@ -23,8 +23,8 @@ const loadDevtools = () =>
     }
   })
 
-const TanStackDevtools =
-  process.env.NODE_ENV === "production" ? () => null : React.lazy(loadDevtools)
+const TanStackDevtools = () => null
+// process.env.NODE_ENV === "production" ? () => null : React.lazy(loadDevtools)
 
 export const Route = createRootRoute<RouterContext>({
   component: () => (
