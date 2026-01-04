@@ -85,8 +85,8 @@ services:
       # Enable Traefik
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-public"
-      # HTTP router for API
-      - "traefik.http.routers.backend.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/v1`, `/docs`, `/redoc`, `/openapi.json`)"
+      # HTTP router for API (corrected syntax for multiple paths with OR operators)
+      - "traefik.http.routers.backend.rule=Host(`${DOMAIN}`) && (PathPrefix(`/api/v1`) || PathPrefix(`/docs`) || PathPrefix(`/redoc`) || Path(`/openapi.json`))"
       - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls=true"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
