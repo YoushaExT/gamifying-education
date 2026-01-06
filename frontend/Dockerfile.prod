@@ -1,5 +1,5 @@
 # Build stage - use native amd64 for fast builds (static output works on any platform)
-FROM --platform=linux/amd64 node:24-alpine AS build
+FROM --platform=linux/amd64 node:25-alpine AS build
 
 WORKDIR /app
 
